@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>จัดการผู้ใช้ — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center justify-between max-w-lg mx-auto">
+      <div class="flex items-center gap-2">
+        <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+        <h1 class="text-lg font-bold text-gray-800">จัดการผู้ใช้</h1>
+      </div>
+      <button class="btn btn-primary text-sm py-2" onclick="showAddUserModal()"><i data-lucide="user-plus" class="w-4 h-4"></i> เพิ่ม</button>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 max-w-lg mx-auto">
+    <div id="users-list" class="space-y-3">
+      <div class="bg-white rounded-xl p-4 animate-pulse"><div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div><div class="h-3 bg-gray-200 rounded w-1/3"></div></div>
+      <div class="bg-white rounded-xl p-4 animate-pulse"><div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div><div class="h-3 bg-gray-200 rounded w-1/3"></div></div>
+    </div>
+  </main>
+
+  <!-- Add/Edit User Modal -->
+  <div id="user-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display:none">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
+      <h3 class="font-bold text-gray-800 text-lg mb-4" id="modal-title">เพิ่มผู้ใช้ใหม่</h3>
+      <form id="user-form">
+        <input type="hidden" id="uf-id">
+        <div class="form-group"><label>ชื่อผู้ใช้ <span class="text-red-500">*</span></label><input type="text" id="uf-username" class="form-input" required></div>
+        <div class="form-group" id="pw-group"><label>รหัสผ่าน <span class="text-red-500">*</span></label><input type="password" id="uf-password" class="form-input"></div>
+        <div class="form-group"><label>ชื่อ-นามสกุล <span class="text-red-500">*</span></label><input type="text" id="uf-fullname" class="form-input" required></div>
+        <div class="form-group">
+          <label>บทบาท <span class="text-red-500">*</span></label>
+          <select id="uf-role" class="form-input">
+            <option value="Worker">Worker (คนงาน)</option>
+            <option value="Store">Store (สโตร์)</option>
+            <option value="Admin">Admin (ผู้ดูแล)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>เบอร์โทร</label><input type="tel" id="uf-phone" class="form-input"></div>
+        <div class="flex gap-2 mt-4">
+          <button type="button" class="btn btn-ghost flex-1" onclick="closeModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary flex-1" id="btn-save-user">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth(['Admin'])) throw new Error('Unauthorized');
+
+    let editingUserId = null;
+
+    async function loadUsers() {
+      const container = document.getElementById('users-list');
+      const res = await API.listUsers();
+      if (!res.ok) { container.innerHTML = `<p class="text-red-500 text-sm">${res.error}</p>`; return; }
+
+      if (!res.data || res.data.length === 0) {
+        container.innerHTML = UI.renderEmptyState('ยังไม่มีผู้ใช้');
+        lucide.createIcons();
+        return;
+      }
+
+      const roleColors = { Admin:'#EF4444', Store:'#3B82F6', Worker:'#10B981' };
+      container.innerHTML = res.data.map(u => `
+        <div class="bg-white rounded-xl p-4 flex items-center justify-between ${!u.active ? 'opacity-50' : ''}">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:${roleColors[u.role] || '#6B7280'}">
+              ${(u.full_name || u.username).charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800 text-sm">${u.full_name} ${!u.active ? '<span class="text-xs text-gray-400">(ปิดใช้งาน)</span>' : ''}</p>
+              <p class="text-xs text-gray-400">@${u.username} · ${u.role} · ${u.phone || '-'}</p>
+            </div>
+          </div>
+          <div class="flex gap-1">
+            <button class="btn-icon" onclick="editUser('${u.id}')" title="แก้ไข"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+            <button class="btn-icon" onclick="resetPw('${u.id}','${u.username}')" title="รีเซ็ตรหัสผ่าน"><i data-lucide="key" class="w-4 h-4"></i></button>
+            ${u.active ? `<button class="btn-icon text-red-400" onclick="deactivateUser('${u.id}','${u.username}')" title="ปิดใช้งาน"><i data-lucide="user-x" class="w-4 h-4"></i></button>` : ''}
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function showAddUserModal() {
+      editingUserId = null;
+      document.getElementById('modal-title').textContent = 'เพิ่มผู้ใช้ใหม่';
+      document.getElementById('user-form').reset();
+      document.getElementById('uf-id').value = '';
+      document.getElementById('pw-group').style.display = 'block';
+      document.getElementById('uf-password').required = true;
+      document.getElementById('uf-username').readOnly = false;
+      document.getElementById('user-modal').style.display = 'flex';
+    }
+
+    async function editUser(userId) {
+      editingUserId = userId;
+      const res = await API.listUsers();
+      if (!res.ok) return;
+      const u = res.data.find(x => x.id === userId);
+      if (!u) return;
+
+      document.getElementById('modal-title').textContent = 'แก้ไขผู้ใช้';
+      document.getElementById('uf-id').value = u.id;
+      document.getElementById('uf-username').value = u.username;
+      document.getElementById('uf-username').readOnly = true;
+      document.getElementById('uf-fullname').value = u.full_name;
+      document.getElementById('uf-role').value = u.role;
+      document.getElementById('uf-phone').value = u.phone || '';
+      document.getElementById('pw-group').style.display = 'none';
+      document.getElementById('uf-password').required = false;
+      document.getElementById('user-modal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('user-modal').style.display = 'none'; }
+
+    document.getElementById('user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-user');
+      UI.setBtnLoading(btn, true);
+
+      const userData = {
+        username: document.getElementById('uf-username').value.trim(),
+        full_name: document.getElementById('uf-fullname').value.trim(),
+        role: document.getElementById('uf-role').value,
+        phone: document.getElementById('uf-phone').value.trim(),
+      };
+
+      let res;
+      if (editingUserId) {
+        res = await API.updateUser(editingUserId, userData);
+      } else {
+        userData.password = document.getElementById('uf-password').value;
+        res = await API.addUser(userData);
+      }
+
+      UI.setBtnLoading(btn, false);
+      if (res.ok) {
+        UI.showToast(editingUserId ? 'แก้ไขสำเร็จ' : 'เพิ่มผู้ใช้สำเร็จ', 'success');
+        closeModal();
+        loadUsers();
+      } else {
+        UI.showToast(res.error || 'ไม่สำเร็จ', 'error');
+      }
+    });
+
+    async function resetPw(userId, username) {
+      UI.showModal('รีเซ็ตรหัสผ่าน', `ต้องการรีเซ็ตรหัสผ่านของ @${username} เป็น "123456" หรือไม่?`, async () => {
+        const res = await API.resetPassword(userId, '123456');
+        if (res.ok) UI.showToast('รีเซ็ตรหัสผ่านสำเร็จ (ใหม่: 123456)', 'success');
+        else UI.showToast(res.error || 'ไม่สำเร็จ', 'error');
+      }, 'รีเซ็ต');
+    }
+
+    async function deactivateUser(userId, username) {
+      UI.showModal('ปิดใช้งาน', `ต้องการปิดใช้งาน @${username} หรือไม่?`, async () => {
+        const res = await API.updateUser(userId, { active: false });
+        if (res.ok) { UI.showToast('ปิดใช้งานสำเร็จ', 'success'); loadUsers(); }
+        else UI.showToast(res.error || 'ไม่สำเร็จ', 'error');
+      });
+    }
+
+    UI.initPage('profile');
+    loadUsers();
+  </script>
+</body>
+</html>

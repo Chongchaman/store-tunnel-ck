@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>รายงาน — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/th.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center gap-2 max-w-lg mx-auto">
+      <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+      <h1 class="text-lg font-bold text-gray-800">รายงาน</h1>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 max-w-lg mx-auto">
+    <!-- Report Cards -->
+    <div class="space-y-3">
+      <div class="bg-white rounded-2xl p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="runReport('stock_all')">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center"><i data-lucide="package" class="w-5 h-5 text-blue-600"></i></div>
+          <div class="flex-1"><h3 class="font-bold text-gray-800 text-sm">สต็อกคงเหลือทั้งหมด</h3><p class="text-xs text-gray-400">แยกตามประเภท</p></div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="showMonthPicker('monthly_summary')">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center"><i data-lucide="calendar" class="w-5 h-5 text-green-600"></i></div>
+          <div class="flex-1"><h3 class="font-bold text-gray-800 text-sm">การเบิก-คืน รายเดือน</h3><p class="text-xs text-gray-400">เลือกเดือน → สรุป</p></div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="runReport('overdue_rental')">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center"><i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i></div>
+          <div class="flex-1"><h3 class="font-bold text-gray-800 text-sm">ของเช่าค้างคืน / Overdue</h3><p class="text-xs text-gray-400">รายการที่เกินกำหนด</p></div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="runReport('asset_by_person')">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center"><i data-lucide="users" class="w-5 h-5 text-purple-600"></i></div>
+          <div class="flex-1"><h3 class="font-bold text-gray-800 text-sm">ทรัพย์สินตามผู้รับผิดชอบ</h3><p class="text-xs text-gray-400">ใครถืออะไรอยู่</p></div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="runReport('low_stock')">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center"><i data-lucide="trending-down" class="w-5 h-5 text-amber-600"></i></div>
+          <div class="flex-1"><h3 class="font-bold text-gray-800 text-sm">ของสิ้นเปลืองต่ำกว่า Reorder</h3><p class="text-xs text-gray-400">ต้องสั่งซื้อเพิ่ม</p></div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Month Picker Modal -->
+    <div id="month-picker" style="display:none" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-5 w-full max-w-xs">
+        <h3 class="font-bold text-gray-800 mb-3">เลือกเดือน</h3>
+        <input type="month" id="report-month" class="form-input mb-3">
+        <div class="flex gap-2">
+          <button class="btn btn-ghost flex-1" onclick="document.getElementById('month-picker').style.display='none'">ยกเลิก</button>
+          <button class="btn btn-primary flex-1" onclick="submitMonthReport()">ดูรายงาน</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Result -->
+    <div id="report-result" class="mt-4" style="display:none">
+      <div class="bg-white rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-gray-800" id="report-title"></h3>
+          <div class="flex gap-1">
+            <button class="btn btn-secondary text-xs py-1 px-2" onclick="exportReportExcel()"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Excel</button>
+            <button class="btn btn-secondary text-xs py-1 px-2" onclick="exportReportPDF()"><i data-lucide="file-text" class="w-3 h-3"></i> PDF</button>
+          </div>
+        </div>
+        <div id="report-content" class="overflow-x-auto"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth(['Admin', 'Store'])) throw new Error('Unauthorized');
+
+    let currentReportData = { headers: [], rows: [], title: '' };
+
+    function showMonthPicker() {
+      document.getElementById('report-month').value = dayjs().format('YYYY-MM');
+      document.getElementById('month-picker').style.display = 'flex';
+    }
+
+    function submitMonthReport() {
+      const month = document.getElementById('report-month').value;
+      document.getElementById('month-picker').style.display = 'none';
+      runReport('monthly_summary', { month });
+    }
+
+    async function runReport(type, params = {}) {
+      const resultEl = document.getElementById('report-result');
+      const contentEl = document.getElementById('report-content');
+      const titleEl = document.getElementById('report-title');
+
+      resultEl.style.display = 'block';
+      contentEl.innerHTML = '<div class="text-center py-4"><span class="spinner" style="border-color:#ddd;border-top-color:#FF6B35"></span></div>';
+
+      const titles = {
+        stock_all: 'สต็อกคงเหลือทั้งหมด',
+        monthly_summary: 'เบิก-คืน รายเดือน',
+        overdue_rental: 'ของเช่าค้างคืน',
+        asset_by_person: 'ทรัพย์สินตามผู้รับผิดชอบ',
+        low_stock: 'สิ้นเปลืองต่ำกว่า Reorder',
+      };
+      titleEl.textContent = titles[type] || type;
+      currentReportData.title = titles[type] || type;
+
+      const res = await API.getReport(type, params);
+      if (!res.ok) { contentEl.innerHTML = `<p class="text-red-500 text-sm">${res.error}</p>`; return; }
+
+      const data = res.data;
+      currentReportData.headers = data.headers || [];
+      currentReportData.rows = data.rows || [];
+
+      // Render table
+      let html = '<table class="w-full text-xs"><thead><tr>';
+      currentReportData.headers.forEach(h => { html += `<th class="text-left p-2 bg-gray-50 font-semibold text-gray-600 whitespace-nowrap">${h}</th>`; });
+      html += '</tr></thead><tbody>';
+      currentReportData.rows.forEach(row => {
+        html += '<tr class="border-b border-gray-50">';
+        row.forEach(cell => { html += `<td class="p-2 text-gray-700 whitespace-nowrap">${cell ?? '-'}</td>`; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      if (currentReportData.rows.length === 0) html = '<p class="text-gray-400 text-sm text-center py-4">ไม่มีข้อมูล</p>';
+      contentEl.innerHTML = html;
+      lucide.createIcons();
+
+      // Scroll to result
+      resultEl.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function exportReportExcel() {
+      if (!currentReportData.rows.length) { UI.showToast('ไม่มีข้อมูล', 'warning'); return; }
+      const wsData = [currentReportData.headers, ...currentReportData.rows];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws, currentReportData.title.substring(0, 31));
+      XLSX.writeFile(wb, `${currentReportData.title}_${dayjs().format('YYYY-MM-DD')}.xlsx`);
+      UI.showToast('Export Excel สำเร็จ', 'success');
+    }
+
+    function exportReportPDF() {
+      if (!currentReportData.rows.length) { UI.showToast('ไม่มีข้อมูล', 'warning'); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'mm', 'a4');
+
+      // Header
+      doc.setFontSize(16);
+      doc.text('STORE TUNNEL CK', 14, 15);
+      doc.setFontSize(12);
+      doc.text(currentReportData.title, 14, 23);
+      doc.setFontSize(9);
+      doc.text('วันที่ออก: ' + dayjs().format('DD/MM/YYYY HH:mm'), 14, 29);
+
+      // Table
+      doc.autoTable({
+        head: [currentReportData.headers],
+        body: currentReportData.rows,
+        startY: 33,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [255, 107, 53] },
+        didDrawPage: (data) => {
+          doc.setFontSize(8);
+          doc.text('หน้า ' + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+        }
+      });
+
+      doc.save(`${currentReportData.title}_${dayjs().format('YYYY-MM-DD')}.pdf`);
+      UI.showToast('Export PDF สำเร็จ', 'success');
+    }
+
+    UI.initPage('home');
+  </script>
+</body>
+</html>

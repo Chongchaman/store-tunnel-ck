@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ตั้งค่า — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center gap-2 max-w-lg mx-auto">
+      <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+      <h1 class="text-lg font-bold text-gray-800">ตั้งค่า</h1>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 max-w-lg mx-auto">
+    <!-- User Info -->
+    <div class="bg-white rounded-2xl p-4 mb-4">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-xl font-bold" id="avatar"></div>
+        <div>
+          <p class="font-bold text-gray-800" id="s-fullname"></p>
+          <p class="text-sm text-gray-400" id="s-role-username"></p>
+        </div>
+      </div>
+      <button onclick="Auth.logout()" class="btn btn-danger w-full justify-center"><i data-lucide="log-out"></i> ออกจากระบบ</button>
+    </div>
+
+    <!-- System Settings (Admin only) -->
+    <div id="admin-settings" style="display:none">
+      <h2 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-1.5">
+        <i data-lucide="settings" class="w-4 h-4 text-primary"></i> ตั้งค่าระบบ
+      </h2>
+      <form id="settings-form" class="bg-white rounded-2xl p-4 space-y-3">
+        <div class="form-group">
+          <label>ชื่อไซต์งาน</label>
+          <input type="text" id="st-site-name" class="form-input" value="STORE TUNNEL CK">
+        </div>
+        <div class="form-group">
+          <label>แจ้งเตือนของสิ้นเปลืองใกล้หมด (วัน)</label>
+          <input type="number" id="st-low-stock-days" class="form-input" min="1" value="7">
+        </div>
+        <div class="form-group">
+          <label>แจ้งเตือนของเช่าใกล้ครบกำหนดคืน (วัน)</label>
+          <input type="number" id="st-rental-due-days" class="form-input" min="1" value="3">
+        </div>
+        <button type="submit" class="btn btn-primary w-full justify-center" id="btn-save-settings">
+          <i data-lucide="save"></i> บันทึกตั้งค่า
+        </button>
+      </form>
+
+      <!-- Quick Links -->
+      <div class="mt-4 space-y-2">
+        <a href="users.html" class="flex items-center gap-3 bg-white rounded-xl p-4 hover:bg-gray-50">
+          <i data-lucide="users" class="w-5 h-5 text-gray-400"></i>
+          <span class="font-medium text-gray-700 text-sm">จัดการผู้ใช้</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 ml-auto"></i>
+        </a>
+        <a href="reports.html" class="flex items-center gap-3 bg-white rounded-xl p-4 hover:bg-gray-50">
+          <i data-lucide="file-bar-chart" class="w-5 h-5 text-gray-400"></i>
+          <span class="font-medium text-gray-700 text-sm">รายงาน</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 ml-auto"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- App Info -->
+    <div class="mt-6 text-center text-xs text-gray-300">
+      <p>STORE TUNNEL CK v1.0</p>
+      <p>ระบบจัดการสโตร์ไซต์งานก่อสร้าง</p>
+    </div>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+
+    const user = Auth.getUser();
+    document.getElementById('avatar').textContent = (user.full_name || 'U').charAt(0);
+    document.getElementById('s-fullname').textContent = user.full_name;
+    document.getElementById('s-role-username').textContent = `${user.role} · @${user.username}`;
+
+    // Admin settings
+    if (Auth.isRole('Admin')) {
+      document.getElementById('admin-settings').style.display = 'block';
+
+      // Load settings
+      (async () => {
+        const res = await API.getSettings();
+        if (res.ok && res.data) {
+          document.getElementById('st-site-name').value = res.data.site_name || 'STORE TUNNEL CK';
+          document.getElementById('st-low-stock-days').value = res.data.low_stock_alert_days || 7;
+          document.getElementById('st-rental-due-days').value = res.data.rental_due_alert_days || 3;
+        }
+      })();
+
+      document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-settings');
+        UI.setBtnLoading(btn, true);
+
+        const res = await API.updateSettings({
+          site_name: document.getElementById('st-site-name').value.trim(),
+          low_stock_alert_days: parseInt(document.getElementById('st-low-stock-days').value),
+          rental_due_alert_days: parseInt(document.getElementById('st-rental-due-days').value),
+        });
+
+        UI.setBtnLoading(btn, false);
+        if (res.ok) UI.showToast('บันทึกตั้งค่าสำเร็จ', 'success');
+        else UI.showToast(res.error || 'ไม่สำเร็จ', 'error');
+      });
+    }
+
+    UI.initPage('profile');
+  </script>
+</body>
+</html>

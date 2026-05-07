@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ประวัติการเคลื่อนไหว — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/th.js"></script>
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center justify-between max-w-lg mx-auto">
+      <div class="flex items-center gap-2">
+        <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+        <h1 class="text-lg font-bold text-gray-800">ประวัติการเคลื่อนไหว</h1>
+      </div>
+      <button class="btn-icon" onclick="exportExcel()" title="Export Excel" style="color:#10B981"><i data-lucide="download"></i></button>
+    </div>
+  </header>
+
+  <main class="max-w-lg mx-auto">
+    <!-- Filters -->
+    <div class="px-4 pt-3 space-y-2">
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <input type="date" id="f-from" class="form-input text-sm" title="จากวันที่">
+        </div>
+        <div class="flex-1">
+          <input type="date" id="f-to" class="form-input text-sm" title="ถึงวันที่">
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <select id="f-action" class="form-input text-sm flex-1">
+          <option value="">ทุก action</option>
+          <option value="add">เพิ่ม</option><option value="withdraw">เบิก</option>
+          <option value="return">คืน</option><option value="edit">แก้ไข</option>
+          <option value="delete">ลบ</option><option value="restock">เติม</option>
+          <option value="assign">มอบหมาย</option>
+        </select>
+        <select id="f-category" class="form-input text-sm flex-1">
+          <option value="">ทุกประเภท</option>
+          <option value="rental">ของเช่า</option><option value="asset">ทรัพย์สิน</option>
+          <option value="consumable">สิ้นเปลือง</option><option value="gas">ถังแก๊ส</option>
+        </select>
+      </div>
+      <button class="btn btn-primary w-full justify-center text-sm" onclick="loadTransactions()">
+        <i data-lucide="search"></i> ค้นหา
+      </button>
+    </div>
+
+    <!-- Transaction List -->
+    <div class="px-4 py-3" id="tx-list">
+      <div class="text-center py-8 text-gray-400 text-sm">กดค้นหาเพื่อดูประวัติ</div>
+    </div>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+
+    let txData = []; // เก็บไว้สำหรับ export
+
+    // Default: ย้อนหลัง 7 วัน
+    document.getElementById('f-to').value = dayjs().format('YYYY-MM-DD');
+    document.getElementById('f-from').value = dayjs().subtract(7, 'day').format('YYYY-MM-DD');
+
+    async function loadTransactions() {
+      const container = document.getElementById('tx-list');
+      UI.showSkeleton(container, 5);
+
+      const filters = {
+        from_date: document.getElementById('f-from').value,
+        to_date: document.getElementById('f-to').value,
+        action: document.getElementById('f-action').value,
+        category: document.getElementById('f-category').value,
+      };
+
+      // Worker เห็นแค่ของตัวเอง
+      if (Auth.isRole('Worker')) {
+        filters.by_user = Auth.getUser().username;
+      }
+
+      const res = await API.listTransactions(filters);
+      if (!res.ok) {
+        container.innerHTML = `<p class="text-center py-8 text-red-400 text-sm">${res.error || 'โหลดไม่สำเร็จ'}</p>`;
+        return;
+      }
+
+      txData = res.data || [];
+
+      if (txData.length === 0) {
+        container.innerHTML = UI.renderEmptyState('ไม่พบรายการในช่วงเวลาที่เลือก');
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = txData.map(tx => `
+        <div class="bg-white rounded-xl p-3 mb-2 flex items-start justify-between">
+          <div class="flex items-start gap-2.5 flex-1 min-w-0">
+            ${UI.renderActionBadge(tx.action)}
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-800 truncate">${tx.item_code}</p>
+              <p class="text-xs text-gray-400 truncate">
+                ${tx.by_user || ''}${tx.for_whom ? ' → ' + tx.for_whom : ''}
+                ${tx.job_ref ? ' | ' + tx.job_ref : ''}
+              </p>
+              ${tx.notes ? `<p class="text-xs text-gray-300 truncate mt-0.5">${tx.notes}</p>` : ''}
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0 ml-2">
+            <p class="text-sm font-bold ${(tx.qty_change || 0) < 0 ? 'text-red-500' : 'text-green-600'}">
+              ${tx.qty_change ? ((tx.qty_change > 0 ? '+' : '') + tx.qty_change) : '-'}
+            </p>
+            <p class="text-xs text-gray-400">${UI.formatDateTime(tx.datetime)}</p>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    // ── Export Excel ──
+    function exportExcel() {
+      if (txData.length === 0) { UI.showToast('ไม่มีข้อมูลให้ Export', 'warning'); return; }
+
+      const ws_data = [
+        ['รหัส TX', 'วันเวลา', 'รหัสของ', 'ประเภท', 'Action', 'ก่อน', 'เปลี่ยน', 'หลัง', 'โดย', 'ให้ใคร', 'งาน', 'หมายเหตุ']
+      ];
+      txData.forEach(tx => {
+        ws_data.push([
+          tx.tx_id, tx.datetime, tx.item_code, tx.item_category,
+          CONFIG.ACTION_LABELS[tx.action] || tx.action,
+          tx.qty_before, tx.qty_change, tx.qty_after,
+          tx.by_user, tx.for_whom, tx.job_ref, tx.notes
+        ]);
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      // Bold header
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const cell = ws[XLSX.utils.encode_cell({ r: 0, c })];
+        if (cell) cell.s = { font: { bold: true } };
+      }
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws, 'ประวัติ');
+      XLSX.writeFile(wb, `transactions_${dayjs().format('YYYY-MM-DD')}.xlsx`);
+      UI.showToast('Export สำเร็จ', 'success');
+    }
+
+    UI.initPage('history');
+    loadTransactions();
+  </script>
+</body>
+</html>

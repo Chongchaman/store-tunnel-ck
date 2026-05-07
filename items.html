@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>รายการของ — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center justify-between max-w-lg mx-auto">
+      <div class="flex items-center gap-2">
+        <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+        <h1 class="text-lg font-bold text-gray-800">รายการของ</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="scan.html" class="btn-icon" style="color:#FF6B35" title="สแกน QR"><i data-lucide="scan-line"></i></a>
+        <a href="add-item.html" class="btn-icon" style="color:#FF6B35" title="เพิ่มของ" id="btn-add"><i data-lucide="plus"></i></a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-lg mx-auto">
+    <!-- Search -->
+    <div class="px-4 pt-3">
+      <div class="search-box">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="search-input" placeholder="ค้นหาชื่อหรือรหัส..." autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="tabs mt-3">
+      <button class="tab active" data-cat="">ทั้งหมด</button>
+      <button class="tab" data-cat="rental">ของเช่า</button>
+      <button class="tab" data-cat="asset">ทรัพย์สิน</button>
+      <button class="tab" data-cat="consumable">สิ้นเปลือง</button>
+      <button class="tab" data-cat="gas">ถังแก๊ส</button>
+    </div>
+
+    <!-- Items List -->
+    <div class="px-4 py-3" id="items-list">
+      <!-- Skeleton placeholders -->
+      <div class="item-card animate-pulse" style="pointer-events:none">
+        <div class="item-card-img"><div class="w-14 h-14 bg-gray-200 rounded-xl"></div></div>
+        <div class="item-card-body"><div class="h-3 bg-gray-200 rounded w-1/3 mb-2"></div><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-200 rounded w-1/2"></div></div>
+      </div>
+      <div class="item-card animate-pulse" style="pointer-events:none">
+        <div class="item-card-img"><div class="w-14 h-14 bg-gray-200 rounded-xl"></div></div>
+        <div class="item-card-body"><div class="h-3 bg-gray-200 rounded w-1/3 mb-2"></div><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-200 rounded w-1/2"></div></div>
+      </div>
+    </div>
+
+    <!-- FAB สแกน -->
+    <a href="scan.html" class="fixed bottom-24 right-4 w-14 h-14 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center shadow-lg z-50 hover:scale-105 transition-transform" title="สแกน QR/Barcode">
+      <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+    </a>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+
+    // ซ่อนปุ่มเพิ่มถ้าเป็น Worker
+    if (!Auth.canAccess('add_item')) {
+      document.getElementById('btn-add').style.display = 'none';
+    }
+
+    let currentCategory = '';
+    let searchTimeout = null;
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentCategory = tab.dataset.cat;
+        loadItems();
+      });
+    });
+
+    // Search with debounce
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => loadItems(), 400);
+    });
+
+    async function loadItems() {
+      const search = document.getElementById('search-input').value.trim();
+      await App.loadItems(currentCategory, search);
+    }
+
+    // Pull-to-refresh (simple version)
+    let touchStartY = 0;
+    document.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
+    document.addEventListener('touchend', (e) => {
+      const diff = e.changedTouches[0].clientY - touchStartY;
+      if (diff > 120 && window.scrollY <= 0) { loadItems(); }
+    });
+
+    UI.initPage('items');
+    loadItems();
+  </script>
+</body>
+</html>

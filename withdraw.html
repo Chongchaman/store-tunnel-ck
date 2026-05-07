@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>เบิกของ — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center gap-2 max-w-lg mx-auto">
+      <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+      <h1 class="text-lg font-bold text-gray-800">เบิกของ</h1>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 max-w-lg mx-auto">
+    <!-- Item Selector -->
+    <div class="bg-white rounded-2xl p-4 mb-4">
+      <label class="text-sm font-bold text-gray-600 mb-2 block">เลือกรายการ</label>
+      <div class="flex gap-2">
+        <div class="search-box flex-1">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="item-search" placeholder="พิมพ์รหัสหรือชื่อ..." autocomplete="off">
+        </div>
+        <a href="scan.html?return=withdraw" class="btn btn-secondary" title="สแกน QR"><i data-lucide="scan-line"></i></a>
+      </div>
+      <div id="search-results" class="mt-2 max-h-48 overflow-y-auto" style="display:none"></div>
+    </div>
+
+    <!-- Selected Item Info -->
+    <div id="item-info" class="bg-white rounded-2xl p-4 mb-4" style="display:none">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center" id="info-icon"></div>
+        <div>
+          <p class="font-bold text-gray-800" id="info-name"></p>
+          <p class="text-xs text-gray-400" id="info-code"></p>
+        </div>
+      </div>
+      <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+        <span class="text-sm text-blue-700">คงเหลือ</span>
+        <span class="text-lg font-bold text-blue-700" id="info-qty"></span>
+      </div>
+    </div>
+
+    <!-- Withdraw Form -->
+    <form id="withdraw-form" class="bg-white rounded-2xl p-4" style="display:none">
+      <div class="form-group">
+        <label>จำนวนที่เบิก <span class="text-red-500">*</span></label>
+        <input type="number" id="w_qty" class="form-input" min="1" required placeholder="0">
+        <p class="form-error" id="qty-error">จำนวนเกินคงเหลือ</p>
+      </div>
+      <div class="form-group">
+        <label>เบิกให้ใคร <span class="text-red-500">*</span></label>
+        <input type="text" id="w_for_whom" class="form-input" required placeholder="ชื่อผู้รับ หรือเลือกจาก list" list="workers-list">
+        <datalist id="workers-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>งาน / Job Reference</label>
+        <input type="text" id="w_job_ref" class="form-input" placeholder="เช่น ST-001, งานเทพื้น Zone A">
+      </div>
+      <div class="form-group">
+        <label>หมายเหตุ</label>
+        <textarea id="w_notes" class="form-input" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary w-full justify-center" id="btn-withdraw">
+        <i data-lucide="package-minus"></i> ยืนยันเบิกของ
+      </button>
+    </form>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth(['Admin', 'Store'])) throw new Error('Unauthorized');
+
+    let selectedItem = null;
+
+    // ── Pre-fill from URL param ──
+    const preCode = App.getParam('code');
+    if (preCode) selectItem(preCode);
+
+    // ── Load workers list ──
+    (async () => {
+      const res = await API.listWorkers();
+      if (res.ok && res.data) {
+        const dl = document.getElementById('workers-list');
+        res.data.forEach(w => {
+          const opt = document.createElement('option');
+          opt.value = w.full_name;
+          dl.appendChild(opt);
+        });
+      }
+    })();
+
+    // ── Search items ──
+    let searchTimer;
+    document.getElementById('item-search').addEventListener('input', (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        const q = e.target.value.trim();
+        if (q.length < 2) { document.getElementById('search-results').style.display = 'none'; return; }
+        const res = await API.listItems({ search: q });
+        const container = document.getElementById('search-results');
+        if (res.ok && res.data && res.data.length > 0) {
+          container.innerHTML = res.data.map(item => `
+            <div class="p-3 hover:bg-gray-50 cursor-pointer rounded-xl flex justify-between items-center border-b border-gray-50" onclick="selectItem('${item.item_code}')">
+              <div><p class="text-sm font-semibold">${item.name}</p><p class="text-xs text-gray-400">${item.item_code} · ${CONFIG.CATEGORY_LABELS[item.category]}</p></div>
+              <span class="text-sm font-bold text-gray-600">${item.qty ?? '-'}</span>
+            </div>
+          `).join('');
+          container.style.display = 'block';
+        } else {
+          container.innerHTML = '<p class="text-sm text-gray-400 p-3">ไม่พบรายการ</p>';
+          container.style.display = 'block';
+        }
+      }, 400);
+    });
+
+    // ── Select item ──
+    async function selectItem(code) {
+      const res = await API.getItem(code);
+      if (!res.ok) { UI.showToast('ไม่พบรายการ', 'error'); return; }
+      selectedItem = res.data;
+      document.getElementById('search-results').style.display = 'none';
+      document.getElementById('item-search').value = `${selectedItem.name} (${selectedItem.item_code})`;
+
+      // Show info
+      const infoEl = document.getElementById('item-info');
+      infoEl.style.display = 'block';
+      document.getElementById('info-name').textContent = selectedItem.name;
+      document.getElementById('info-code').textContent = selectedItem.item_code + ' · ' + (CONFIG.CATEGORY_LABELS[selectedItem.category] || '');
+      document.getElementById('info-qty').textContent = (selectedItem.qty ?? '-') + ' ' + (selectedItem.unit || '');
+      document.getElementById('info-icon').innerHTML = `<i data-lucide="${CONFIG.CATEGORY_ICONS[selectedItem.category] || 'package'}" style="color:${CONFIG.CATEGORY_COLORS[selectedItem.category]}"></i>`;
+      lucide.createIcons();
+
+      // Show form
+      document.getElementById('withdraw-form').style.display = 'block';
+      document.getElementById('w_qty').max = selectedItem.qty || 9999;
+    }
+
+    // ── Submit withdraw ──
+    document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedItem) { UI.showToast('กรุณาเลือกรายการ', 'warning'); return; }
+
+      const qty = parseInt(document.getElementById('w_qty').value);
+      const forWhom = document.getElementById('w_for_whom').value.trim();
+      const jobRef = document.getElementById('w_job_ref').value.trim();
+      const notes = document.getElementById('w_notes').value.trim();
+
+      if (qty > (selectedItem.qty || 0)) {
+        document.getElementById('qty-error').style.display = 'block';
+        return;
+      }
+      document.getElementById('qty-error').style.display = 'none';
+
+      if (!forWhom) { UI.showToast('กรุณาระบุผู้รับ', 'warning'); return; }
+
+      const btn = document.getElementById('btn-withdraw');
+      UI.setBtnLoading(btn, true);
+
+      const res = await API.withdraw(selectedItem.item_code, qty, forWhom, jobRef, notes);
+      UI.setBtnLoading(btn, false);
+
+      if (res.ok) {
+        UI.showToast(`เบิก ${selectedItem.name} จำนวน ${qty} สำเร็จ`, 'success');
+        setTimeout(() => window.location.href = 'items.html', 1200);
+      } else {
+        UI.showToast(res.error || 'เบิกไม่สำเร็จ', 'error');
+      }
+    });
+
+    UI.initPage('home');
+  </script>
+</body>
+</html>

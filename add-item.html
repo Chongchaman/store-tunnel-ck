@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>เพิ่มรายการ — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center gap-2 max-w-lg mx-auto">
+      <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+      <h1 class="text-lg font-bold text-gray-800" id="page-title">เพิ่มรายการใหม่</h1>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 max-w-lg mx-auto">
+    <!-- Category Selector -->
+    <div class="bg-white rounded-2xl p-4 mb-4" id="category-section">
+      <label class="text-sm font-bold text-gray-600 mb-3 block">ประเภท</label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="cat-radio">
+          <input type="radio" name="category" value="rental" checked>
+          <div class="cat-radio-card"><i data-lucide="package-check" style="color:#3B82F6"></i><span>ของเช่า</span></div>
+        </label>
+        <label class="cat-radio">
+          <input type="radio" name="category" value="asset">
+          <div class="cat-radio-card"><i data-lucide="hard-hat" style="color:#8B5CF6"></i><span>ทรัพย์สิน</span></div>
+        </label>
+        <label class="cat-radio">
+          <input type="radio" name="category" value="consumable">
+          <div class="cat-radio-card"><i data-lucide="boxes" style="color:#10B981"></i><span>สิ้นเปลือง</span></div>
+        </label>
+        <label class="cat-radio">
+          <input type="radio" name="category" value="gas">
+          <div class="cat-radio-card"><i data-lucide="cylinder" style="color:#F59E0B"></i><span>ถังแก๊ส/ลม</span></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Dynamic Form -->
+    <form id="item-form" class="bg-white rounded-2xl p-4">
+      <!-- Common Fields -->
+      <div class="form-group">
+        <label for="item_code">รหัส <span class="text-red-500">*</span></label>
+        <input type="text" id="item_code" class="form-input" placeholder="รหัสบริษัท เช่น SCF-001" required>
+        <p class="form-error" id="code-error">รหัสนี้ซ้ำกับในระบบ</p>
+      </div>
+      <div class="form-group">
+        <label for="name">ชื่อ <span class="text-red-500">*</span></label>
+        <input type="text" id="name" class="form-input" placeholder="ชื่อรายการ" required>
+      </div>
+      <div class="form-group">
+        <label for="unit">หน่วยนับ</label>
+        <input type="text" id="unit" class="form-input" placeholder="เช่น ตัว, เส้น, ชุด, ถัง">
+      </div>
+      <div class="form-group">
+        <label for="photo_url">URL รูปภาพ (ถ้ามี)</label>
+        <input type="url" id="photo_url" class="form-input" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label for="barcode_value">ค่า Barcode/QR (ถ้าต่างจากรหัส)</label>
+        <input type="text" id="barcode_value" class="form-input" placeholder="ใช้รหัสเดิมถ้าว่าง">
+      </div>
+
+      <!-- Category-specific fields -->
+      <div id="fields-rental">
+        <hr class="my-4 border-gray-100">
+        <h3 class="text-sm font-bold text-blue-600 mb-3">ข้อมูลการเช่า</h3>
+        <div class="form-group"><label>จำนวน</label><input type="number" id="r_qty" class="form-input" min="0" value="0"></div>
+        <div class="form-group"><label>บริษัทผู้ให้เช่า</label><input type="text" id="r_supplier" class="form-input"></div>
+        <div class="form-group"><label>ผู้ติดต่อ</label><input type="text" id="r_contact" class="form-input"></div>
+        <div class="form-group"><label>วันเช่า</label><input type="date" id="r_rent_date" class="form-input"></div>
+        <div class="form-group"><label>ครบกำหนดคืน</label><input type="date" id="r_due_date" class="form-input"></div>
+        <div class="form-group"><label>ค่าเช่า/วัน (฿)</label><input type="number" id="r_rate" class="form-input" min="0" step="0.01"></div>
+        <div class="form-group"><label>หมายเหตุ</label><textarea id="r_notes" class="form-input" rows="2"></textarea></div>
+      </div>
+
+      <div id="fields-asset" style="display:none">
+        <hr class="my-4 border-gray-100">
+        <h3 class="text-sm font-bold text-purple-600 mb-3">ข้อมูลทรัพย์สิน</h3>
+        <div class="form-group"><label>รหัสทรัพย์สิน (asset_code)</label><input type="text" id="a_asset_code" class="form-input"></div>
+        <div class="form-group"><label>ราคาทุน (฿)</label><input type="number" id="a_cost" class="form-input" min="0" step="0.01"></div>
+        <div class="form-group"><label>หมายเหตุ</label><textarea id="a_notes" class="form-input" rows="2"></textarea></div>
+      </div>
+
+      <div id="fields-consumable" style="display:none">
+        <hr class="my-4 border-gray-100">
+        <h3 class="text-sm font-bold text-green-600 mb-3">ข้อมูลสิ้นเปลือง</h3>
+        <div class="form-group"><label>จำนวน</label><input type="number" id="c_qty" class="form-input" min="0" value="0"></div>
+        <div class="form-group"><label>ราคา/หน่วย (฿)</label><input type="number" id="c_price" class="form-input" min="0" step="0.01"></div>
+        <div class="form-group"><label>จุดสั่งซื้อ (reorder point)</label><input type="number" id="c_reorder" class="form-input" min="0" value="5"></div>
+      </div>
+
+      <div id="fields-gas" style="display:none">
+        <hr class="my-4 border-gray-100">
+        <h3 class="text-sm font-bold text-yellow-600 mb-3">ข้อมูลถังแก๊ส/ลม</h3>
+        <div class="form-group"><label>รหัสถัง (tank_code)</label><input type="text" id="g_tank_code" class="form-input"></div>
+        <div class="form-group">
+          <label>ชนิดแก๊ส</label>
+          <select id="g_gas_type" class="form-input">
+            <option value="air">ลมอัด</option><option value="oxygen">ออกซิเจน</option>
+            <option value="lpg">LPG</option><option value="acetylene">อะเซทิลีน</option>
+            <option value="argon">อาร์กอน</option><option value="co2">CO₂</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="form-group"><label>ขนาด</label><input type="text" id="g_size" class="form-input" placeholder="เช่น 50L, 10kg"></div>
+        <div class="form-group">
+          <label>ระดับ</label>
+          <select id="g_level" class="form-input">
+            <option value="full">เต็ม</option><option value="in_use">กำลังใช้</option><option value="empty">หมด</option>
+          </select>
+        </div>
+        <div class="form-group"><label>บริษัทเจ้าของถัง</label><input type="text" id="g_owner" class="form-input"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full justify-center mt-4" id="btn-save">
+        <i data-lucide="save"></i> บันทึก
+      </button>
+    </form>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth(['Admin', 'Store'])) throw new Error('Unauthorized');
+
+    // ── Edit mode check ──
+    const editCode = App.getParam('edit');
+    let isEditMode = !!editCode;
+    if (isEditMode) {
+      document.getElementById('page-title').textContent = 'แก้ไขรายการ';
+      document.getElementById('item_code').readOnly = true;
+      document.getElementById('item_code').style.background = '#F3F4F6';
+      document.getElementById('category-section').style.display = 'none';
+      // Load existing data
+      (async () => {
+        const res = await API.getItem(editCode);
+        if (res.ok && res.data) {
+          const d = res.data;
+          document.getElementById('item_code').value = d.item_code;
+          document.getElementById('name').value = d.name || '';
+          document.getElementById('unit').value = d.unit || '';
+          document.getElementById('photo_url').value = d.photo_url || '';
+          document.getElementById('barcode_value').value = d.barcode_value || '';
+          // set category & show fields
+          switchCategory(d.category);
+          // fill category fields
+          if (d.category === 'rental') {
+            document.getElementById('r_qty').value = d.qty || 0;
+            document.getElementById('r_supplier').value = d.supplier_company || '';
+            document.getElementById('r_contact').value = d.supplier_contact || '';
+            document.getElementById('r_rent_date').value = d.rent_date || '';
+            document.getElementById('r_due_date').value = d.due_date || '';
+            document.getElementById('r_rate').value = d.rate_per_day || '';
+            document.getElementById('r_notes').value = d.notes || '';
+          } else if (d.category === 'asset') {
+            document.getElementById('a_asset_code').value = d.asset_code || '';
+            document.getElementById('a_cost').value = d.cost || '';
+            document.getElementById('a_notes').value = d.notes || '';
+          } else if (d.category === 'consumable') {
+            document.getElementById('c_qty').value = d.qty || 0;
+            document.getElementById('c_price').value = d.price_per_unit || '';
+            document.getElementById('c_reorder').value = d.reorder_point || 5;
+          } else if (d.category === 'gas') {
+            document.getElementById('g_tank_code').value = d.tank_code || '';
+            document.getElementById('g_gas_type').value = d.gas_type || 'air';
+            document.getElementById('g_size').value = d.size || '';
+            document.getElementById('g_level').value = d.level || 'full';
+            document.getElementById('g_owner').value = d.owner_company || '';
+          }
+        }
+      })();
+    }
+
+    // ── Category switch ──
+    function switchCategory(cat) {
+      ['rental','asset','consumable','gas'].forEach(c => {
+        document.getElementById('fields-' + c).style.display = c === cat ? 'block' : 'none';
+      });
+      // Check radio
+      const radio = document.querySelector(`input[name="category"][value="${cat}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    document.querySelectorAll('input[name="category"]').forEach(radio => {
+      radio.addEventListener('change', () => switchCategory(radio.value));
+    });
+
+    // ── Form submit ──
+    document.getElementById('item-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save');
+      UI.setBtnLoading(btn, true);
+
+      const category = document.querySelector('input[name="category"]:checked')?.value || 'rental';
+      const common = {
+        item_code: document.getElementById('item_code').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        unit: document.getElementById('unit').value.trim(),
+        photo_url: document.getElementById('photo_url').value.trim(),
+        barcode_value: document.getElementById('barcode_value').value.trim(),
+      };
+
+      if (!common.item_code || !common.name) {
+        UI.showToast('กรุณากรอกรหัสและชื่อ', 'warning');
+        UI.setBtnLoading(btn, false);
+        return;
+      }
+
+      // Category-specific fields
+      let extra = {};
+      if (category === 'rental') {
+        extra = { qty: +document.getElementById('r_qty').value, supplier_company: document.getElementById('r_supplier').value, supplier_contact: document.getElementById('r_contact').value, rent_date: document.getElementById('r_rent_date').value, due_date: document.getElementById('r_due_date').value, rate_per_day: +document.getElementById('r_rate').value, notes: document.getElementById('r_notes').value, status: 'in_stock' };
+      } else if (category === 'asset') {
+        extra = { asset_code: document.getElementById('a_asset_code').value, cost: +document.getElementById('a_cost').value, notes: document.getElementById('a_notes').value, status: 'available' };
+      } else if (category === 'consumable') {
+        extra = { qty: +document.getElementById('c_qty').value, price_per_unit: +document.getElementById('c_price').value, reorder_point: +document.getElementById('c_reorder').value };
+      } else if (category === 'gas') {
+        extra = { tank_code: document.getElementById('g_tank_code').value, gas_type: document.getElementById('g_gas_type').value, size: document.getElementById('g_size').value, level: document.getElementById('g_level').value, owner_company: document.getElementById('g_owner').value, status: 'in_stock' };
+      }
+
+      const fields = { ...common, ...extra };
+      let res;
+      if (isEditMode) {
+        res = await API.updateItem(editCode, fields);
+      } else {
+        res = await API.addItem(category, fields);
+      }
+
+      UI.setBtnLoading(btn, false);
+      if (res.ok) {
+        UI.showToast(isEditMode ? 'แก้ไขสำเร็จ' : 'เพิ่มรายการสำเร็จ', 'success');
+        setTimeout(() => window.location.href = `item-detail.html?code=${encodeURIComponent(common.item_code)}`, 800);
+      } else {
+        if (res.error && res.error.includes('ซ้ำ')) {
+          document.getElementById('code-error').style.display = 'block';
+          document.getElementById('item_code').classList.add('error');
+        }
+        UI.showToast(res.error || 'ไม่สำเร็จ', 'error');
+      }
+    });
+
+    UI.initPage('items');
+  </script>
+
+  <style>
+    .cat-radio input { display:none; }
+    .cat-radio-card { display:flex; align-items:center; gap:8px; padding:12px 14px; border:2px solid #E5E7EB; border-radius:14px; cursor:pointer; transition:border-color .2s, background .2s; font-size:13px; font-weight:600; color:#4B5563; }
+    .cat-radio-card svg { width:20px; height:20px; }
+    .cat-radio input:checked + .cat-radio-card { border-color:#FF6B35; background:#FFF3ED; color:#FF6B35; }
+  </style>
+</body>
+</html>
