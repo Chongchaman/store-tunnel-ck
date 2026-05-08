@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>รับเข้า / เติมสต็อค — STORE TUNNEL CK</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
+    <div class="flex items-center gap-2 max-w-lg mx-auto">
+      <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
+      <h1 class="text-lg font-bold text-gray-800">รับเข้า / เติมสต็อค</h1>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 max-w-lg mx-auto">
+    <!-- Select Item -->
+    <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <label class="text-sm font-bold text-gray-600 mb-2 block">ค้นหารายการเพื่อรับเข้า</label>
+      <div class="flex gap-2">
+        <div class="search-box flex-1">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="item-search" placeholder="พิมพ์รหัสหรือชื่อ..." autocomplete="off">
+        </div>
+        <a href="scan.html?return=restock" class="btn btn-secondary" title="สแกน QR"><i data-lucide="scan-line"></i></a>
+      </div>
+      <div id="search-results" class="mt-2 max-h-48 overflow-y-auto" style="display:none"></div>
+    </div>
+
+    <!-- Item Info -->
+    <div id="item-info" class="bg-white rounded-2xl p-4 mb-4 shadow-sm" style="display:none">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center" id="info-icon"></div>
+        <div>
+          <p class="font-bold text-gray-800 leading-tight" id="info-name"></p>
+          <p class="text-xs text-gray-400" id="info-code"></p>
+        </div>
+      </div>
+      <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+        <span class="text-sm text-green-700">คงเหลือเดิม</span>
+        <span class="text-lg font-bold text-green-700" id="info-qty"></span>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <form id="restock-form" class="bg-white rounded-2xl p-4 shadow-sm" style="display:none">
+      <div class="form-group">
+        <label>จำนวนรับเข้า <span class="text-red-500">*</span></label>
+        <input type="number" id="r_qty" class="form-input text-lg font-bold" min="1" required placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>หมายเหตุ / เลข PO</label>
+        <textarea id="r_notes" class="form-input" rows="2" placeholder="เช่น ซื้อจากร้านเจริญการช่าง"></textarea>
+      </div>
+      <button type="submit" class="btn btn-success w-full justify-center" id="btn-restock">
+        <i data-lucide="package-plus"></i> ยืนยันรับเข้า
+      </button>
+    </form>
+  </main>
+
+  <div id="bottom-nav"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    if (!Auth.requireAuth(['Admin', 'Store'])) throw new Error('Unauthorized');
+
+    let selectedItem = null;
+
+    // Pre-fill from URL param
+    const preCode = App.getParam('code');
+    if (preCode) selectItemByCode(preCode);
+
+    // Search items
+    let searchTimer;
+    document.getElementById('item-search').addEventListener('input', (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        const q = e.target.value.trim();
+        if (q.length < 2) { document.getElementById('search-results').style.display = 'none'; return; }
+        const res = await API.listItems({ search: q });
+        const container = document.getElementById('search-results');
+        if (res.ok && res.data && res.data.length > 0) {
+          // Filter out assets
+          const validItems = res.data.filter(i => i.category !== 'asset');
+          container.innerHTML = validItems.map(item => `
+            <div class="p-3 hover:bg-gray-50 cursor-pointer rounded-xl flex justify-between items-center border-b border-gray-50" onclick="selectItemObj(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+              <div><p class="text-sm font-semibold">${item.name}</p><p class="text-xs text-gray-400">${item.item_code} · ${CONFIG.CATEGORY_LABELS[item.category]}</p></div>
+              <span class="text-sm font-bold text-gray-600">${item.qty ?? '-'}</span>
+            </div>
+          `).join('');
+          container.style.display = 'block';
+        } else {
+          container.innerHTML = '<p class="text-sm text-gray-400 p-3">ไม่พบรายการ</p>';
+          container.style.display = 'block';
+        }
+      }, 400);
+    });
+
+    async function selectItemByCode(code) {
+      const res = await API.getItem(code);
+      if (!res.ok) { UI.showToast('ไม่พบรายการ', 'error'); return; }
+      if (res.data.category === 'asset') { UI.showToast('ทรัพย์สินไม่ต้องรับเข้าแบบเติมสต็อค', 'warning'); return; }
+      selectItemObj(res.data);
+    }
+
+    function selectItemObj(item) {
+      selectedItem = item;
+      document.getElementById('search-results').style.display = 'none';
+      document.getElementById('item-search').value = `${item.name} (${item.item_code})`;
+
+      // Show info
+      document.getElementById('item-info').style.display = 'block';
+      document.getElementById('info-name').textContent = item.name;
+      document.getElementById('info-code').textContent = item.item_code + ' · ' + (CONFIG.CATEGORY_LABELS[item.category] || '');
+      document.getElementById('info-qty').textContent = (item.qty ?? 0) + ' ' + (item.unit || '');
+      document.getElementById('info-icon').innerHTML = `<i data-lucide="${CONFIG.CATEGORY_ICONS[item.category] || 'package'}" style="color:${CONFIG.CATEGORY_COLORS[item.category]}"></i>`;
+      lucide.createIcons();
+
+      // Show form
+      document.getElementById('restock-form').style.display = 'block';
+      document.getElementById('r_qty').focus();
+    }
+
+    // Submit
+    document.getElementById('restock-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedItem) return;
+
+      const qty = parseInt(document.getElementById('r_qty').value);
+      const notes = document.getElementById('r_notes').value.trim();
+      const btn = document.getElementById('btn-restock');
+
+      UI.setBtnLoading(btn, true);
+      const res = await API.restock(selectedItem.item_code, qty, notes);
+      UI.setBtnLoading(btn, false);
+
+      if (res.ok) {
+        UI.showToast(`รับเข้า ${selectedItem.name} สำเร็จ`, 'success');
+        setTimeout(() => window.location.href = 'items.html', 1200);
+      } else {
+        UI.showToast(res.error || 'ทำรายการไม่สำเร็จ', 'error');
+      }
+    });
+
+    UI.initPage('home');
+  </script>
+</body>
+</html>

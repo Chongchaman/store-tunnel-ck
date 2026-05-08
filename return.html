@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>คืนของเช่า — STORE TUNNEL CK</title>
+  <title>คืนของ (เช่า/ทรัพย์สิน) — STORE TUNNEL CK</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
@@ -15,14 +15,14 @@
   <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
     <div class="flex items-center gap-2 max-w-lg mx-auto">
       <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
-      <h1 class="text-lg font-bold text-gray-800">คืนของเช่า</h1>
+      <h1 class="text-lg font-bold text-gray-800">คืนของ</h1>
     </div>
   </header>
 
   <main class="px-4 py-4 max-w-lg mx-auto">
     <!-- Select rental item -->
     <div class="bg-white rounded-2xl p-4 mb-4">
-      <label class="text-sm font-bold text-gray-600 mb-2 block">เลือกรายการเช่าที่ต้องการคืน</label>
+      <label class="text-sm font-bold text-gray-600 mb-2 block">เลือกรายการที่ต้องการคืน (เช่า/ทรัพย์สิน)</label>
       <select id="rental-select" class="form-input">
         <option value="">-- เลือกรายการ --</option>
       </select>
@@ -95,12 +95,16 @@
     // Set default return date = today
     document.getElementById('ret_date').value = dayjs().format('YYYY-MM-DD');
 
-    // Load rental items with status 'out'
+    // Load items that can be returned (rental, asset)
     (async () => {
-      const res = await API.listItems({ category: 'rental' });
+      const res = await API.listItems();
       if (res.ok && res.data) {
         const sel = document.getElementById('rental-select');
-        const outItems = res.data.filter(i => i.status === 'out' || i.status === 'in_stock');
+        // ทรัพย์สินที่ถูกเบิก (assigned) และของเช่าที่อยู่ข้างนอก (out)
+        const outItems = res.data.filter(i => 
+          (i.category === 'asset' && i.status === 'assigned') ||
+          (i.category === 'rental' && (i.status === 'out' || i.status === 'in_stock'))
+        );
         outItems.forEach(item => {
           const opt = document.createElement('option');
           opt.value = item.item_code;
@@ -132,7 +136,18 @@
 
       document.getElementById('rental-info').style.display = 'block';
       document.getElementById('return-form').style.display = 'block';
-      document.getElementById('ret_qty').max = selectedRental.qty || 9999;
+      
+      if (selectedRental.category === 'asset') {
+        document.getElementById('ret_qty').closest('.form-group').style.display = 'none';
+        document.getElementById('ret_qty').value = 1;
+        document.getElementById('ret_date').closest('.form-group').style.display = 'none';
+      } else {
+        document.getElementById('ret_qty').closest('.form-group').style.display = 'block';
+        document.getElementById('ret_qty').value = '';
+        document.getElementById('ret_qty').max = selectedRental.qty || 9999;
+        document.getElementById('ret_date').closest('.form-group').style.display = 'block';
+      }
+      
       calculateCost();
     });
 

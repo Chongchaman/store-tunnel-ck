@@ -338,13 +338,19 @@ function processWithdrawBatch(payload, currentUser) {
 
 function processReturn(payload, currentUser) {
   const item = getItem(payload.item_code);
-  const newQty = (Number(item.qty) || 0) + Number(payload.qty);
   const sheet = getSheet(TABS.ITEMS);
   const headers = getHeaders(TABS.ITEMS);
-  sheet.getRange(item._row, headers.indexOf('qty') + 1).setValue(newQty);
-  sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('in_stock');
   
-  recordTransaction({ ...payload, action: 'return', qty_before: item.qty, qty_change: payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
+  if (item.category === 'asset') {
+    sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('available');
+    recordTransaction({ ...payload, action: 'return', qty_before: 1, qty_change: 0, qty_after: 1, by_user: currentUser.full_name, item_category: item.category });
+  } else {
+    const newQty = (Number(item.qty) || 0) + Number(payload.qty);
+    sheet.getRange(item._row, headers.indexOf('qty') + 1).setValue(newQty);
+    sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('in_stock');
+    recordTransaction({ ...payload, action: 'return', qty_before: item.qty, qty_change: payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
+  }
+  
   clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
@@ -355,6 +361,7 @@ function processRestock(payload, currentUser) {
   const sheet = getSheet(TABS.ITEMS);
   const headers = getHeaders(TABS.ITEMS);
   sheet.getRange(item._row, headers.indexOf('qty') + 1).setValue(newQty);
+  sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('in_stock');
   
   recordTransaction({ ...payload, action: 'restock', qty_before: item.qty, qty_change: payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
   clearSheetCache(TABS.ITEMS);

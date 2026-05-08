@@ -135,6 +135,9 @@
         if (returnTo === 'withdraw') {
           document.getElementById('result-link').href = `withdraw.html?code=${encodeURIComponent(res.data.item_code)}`;
           document.getElementById('result-link').innerHTML = '<i data-lucide="package-minus"></i> เบิกของนี้';
+        } else if (returnTo === 'restock') {
+          document.getElementById('result-link').href = `restock.html?code=${encodeURIComponent(res.data.item_code)}`;
+          document.getElementById('result-link').innerHTML = '<i data-lucide="package-plus"></i> รับเข้าของนี้';
         } else {
           document.getElementById('result-link').href = `item-detail.html?code=${encodeURIComponent(res.data.item_code)}`;
         }

@@ -178,8 +178,9 @@ const App = {
         ${canEdit ? `<a href="add-item.html?edit=${encodeURIComponent(item.item_code)}" class="btn btn-secondary"><i data-lucide="edit-3"></i> แก้ไข</a>` : ''}
         ${canEdit && ['consumable','gas','rental'].includes(item.category) ? `<button onclick="App.showAdjustQtyModal('${item.item_code}', ${item.qty || 0})" class="btn btn-warning" style="background:#F59E0B;color:white;border:none;"><i data-lucide="sliders"></i> ปรับยอด</button>` : ''}
         ${canWithdraw && ['rental','consumable','gas'].includes(item.category) ? `<a href="withdraw.html?code=${encodeURIComponent(item.item_code)}" class="btn btn-primary"><i data-lucide="package-minus"></i> เบิก</a>` : ''}
+        ${canEdit && ['consumable','gas'].includes(item.category) ? `<a href="restock.html?code=${encodeURIComponent(item.item_code)}" class="btn btn-success" style="background:#10B981;color:white;border:none;"><i data-lucide="package-plus"></i> รับเข้า (Restock)</a>` : ''}
         ${canWithdraw && item.category === 'asset' ? `<button onclick="App.showAssignModal('${item.item_code}')" class="btn btn-primary"><i data-lucide="user-plus"></i> มอบหมาย</button>` : ''}
-        ${canWithdraw && item.category === 'rental' && item.status === 'out' ? `<a href="return.html?code=${encodeURIComponent(item.item_code)}" class="btn btn-success"><i data-lucide="package-plus"></i> คืน</a>` : ''}
+        ${canWithdraw && ((item.category === 'rental' && item.status === 'out') || (item.category === 'asset' && item.status === 'assigned')) ? `<a href="return.html?code=${encodeURIComponent(item.item_code)}" class="btn btn-success"><i data-lucide="package-plus"></i> คืนของ</a>` : ''}
         ${canDelete ? `<button onclick="App.confirmDelete('${item.item_code}')" class="btn btn-danger"><i data-lucide="trash-2"></i> ลบ</button>` : ''}
       </div>
 
