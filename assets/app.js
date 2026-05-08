@@ -12,7 +12,7 @@ const App = {
 
     UI.showSkeleton(summaryGrid, 4);
 
-    // ดึงข้อมูลสรุป
+    // ดึงข้อมูลสรุป (ได้ทั้ง summary และ alerts มาพร้อมกัน)
     const res = await API.getDashboardSummary();
     if (!res.ok) {
       UI.showToast(res.error || 'โหลดข้อมูลไม่สำเร็จ', 'error');
@@ -23,17 +23,18 @@ const App = {
 
     // render summary cards
     summaryGrid.innerHTML = `
-      ${this.summaryCard('ของเช่า', d.rental_count || 0, 'package-check', CONFIG.CATEGORY_COLORS.rental)}
-      ${this.summaryCard('ทรัพย์สิน', d.asset_count || 0, 'hard-hat', CONFIG.CATEGORY_COLORS.asset)}
-      ${this.summaryCard('สิ้นเปลือง', d.consumable_count || 0, 'boxes', CONFIG.CATEGORY_COLORS.consumable)}
-      ${this.summaryCard('ถังแก๊ส/ลม', d.gas_count || 0, 'cylinder', CONFIG.CATEGORY_COLORS.gas)}
+      ${this.summaryCard('ของเช่า', d.summary?.rental_total || 0, 'package-check', CONFIG.CATEGORY_COLORS.rental)}
+      ${this.summaryCard('ทรัพย์สิน', d.summary?.asset_total || 0, 'hard-hat', CONFIG.CATEGORY_COLORS.asset)}
+      ${this.summaryCard('สิ้นเปลือง', d.summary?.consumable_types || 0, 'boxes', CONFIG.CATEGORY_COLORS.consumable)}
+      ${this.summaryCard('ถังแก๊ส/ลม', d.summary?.gas_total || 0, 'cylinder', CONFIG.CATEGORY_COLORS.gas)}
     `;
     lucide.createIcons();
 
-    // ดึง alerts
-    const alertRes = await API.getAlerts();
-    if (alertRes.ok && alertRes.data) {
-      this.renderAlerts(alertSection, alertRes.data);
+    // แสดง alerts จากข้อมูลที่ได้มาพร้อมกัน
+    if (d.alerts && d.alerts.length > 0) {
+      this.renderAlerts(alertSection, d.alerts);
+    } else {
+      alertSection.innerHTML = '';
     }
   },
 
@@ -51,34 +52,21 @@ const App = {
   },
 
   renderAlerts(container, alerts) {
-    if (!alerts || (alerts.low_stock.length === 0 && alerts.overdue.length === 0 && alerts.due_soon.length === 0)) {
+    if (!alerts || alerts.length === 0) {
       container.innerHTML = '';
       return;
     }
 
     let html = '<h2 class="section-title" style="color:#EF4444"><i data-lucide="alert-triangle" style="width:18px;height:18px"></i> แจ้งเตือน</h2>';
 
-    // ของสิ้นเปลืองใกล้หมด
-    alerts.low_stock?.forEach(item => {
-      html += `<div class="alert-card alert-warning">
-        <i data-lucide="alert-triangle"></i>
-        <div><strong>${item.name}</strong> — เหลือ ${item.qty} ${item.unit || ''} (ต่ำกว่ากำหนด)</div>
-      </div>`;
-    });
-
-    // ของเช่าเกินกำหนด
-    alerts.overdue?.forEach(item => {
-      html += `<div class="alert-card alert-danger">
-        <i data-lucide="clock"></i>
-        <div><strong>${item.name}</strong> — เกินกำหนดคืน ${item.days_overdue} วัน</div>
-      </div>`;
-    });
-
-    // ของเช่าใกล้ครบกำหนด
-    alerts.due_soon?.forEach(item => {
-      html += `<div class="alert-card alert-info">
-        <i data-lucide="calendar-clock"></i>
-        <div><strong>${item.name}</strong> — ครบกำหนดคืนใน ${item.days_left} วัน</div>
+    alerts.forEach(item => {
+      let icon = 'alert-triangle';
+      let alertClass = item.type === 'danger' ? 'alert-danger' : 'alert-warning';
+      if (item.message.includes('เลยกำหนดคืน')) icon = 'clock';
+      
+      html += `<div class="alert-card ${alertClass}">
+        <i data-lucide="${icon}"></i>
+        <div><strong>${item.message}</strong></div>
       </div>`;
     });
 
