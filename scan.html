@@ -92,7 +92,12 @@
         html5QrCode = new Html5Qrcode('qr-reader');
         await html5QrCode.start(
           { facingMode: currentCamera },
-          { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+          { 
+            fps: 30, // เพิ่มเฟรมเรตเพื่อให้จับภาพได้ไวขึ้น
+            qrbox: { width: 260, height: 260 }, // ขยายกล่องให้เล็งง่ายขึ้น
+            aspectRatio: 1.0,
+            useBarCodeDetectorIfSupported: true // ใช้ตัวถอดรหัสของ Browser (Hardware Acceleration) ซึ่งจะสแกนได้ไวมากบนมือถือ
+          },
           onScanSuccess,
           () => {} // ignore scan failures
         );
