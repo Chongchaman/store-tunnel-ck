@@ -152,12 +152,12 @@
     }
 
     function removeFromCart(code) {
-      cart = cart.filter(i => i.item_code !== code);
+      cart = cart.filter(i => String(i.item_code) !== String(code));
       renderCart();
     }
 
     function updateCartQty(code, qty) {
-      const item = cart.find(i => i.item_code === code);
+      const item = cart.find(i => String(i.item_code) === String(code));
       if (item) item.withdrawQty = parseInt(qty) || 1;
     }
 
