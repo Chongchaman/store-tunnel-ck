@@ -41,15 +41,15 @@
           <p class="text-xs text-gray-400" id="info-code"></p>
         </div>
       </div>
-      <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
-        <span class="text-sm text-blue-700">คงเหลือ</span>
+      <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl" id="info-status-bar">
+        <span class="text-sm text-blue-700" id="info-status-label">คงเหลือ</span>
         <span class="text-lg font-bold text-blue-700" id="info-qty"></span>
       </div>
     </div>
 
     <!-- Withdraw Form -->
     <form id="withdraw-form" class="bg-white rounded-2xl p-4" style="display:none">
-      <div class="form-group">
+      <div class="form-group" id="qty-group">
         <label>จำนวนที่เบิก <span class="text-red-500">*</span></label>
         <input type="number" id="w_qty" class="form-input" min="1" required placeholder="0">
         <p class="form-error" id="qty-error">จำนวนเกินคงเหลือ</p>
@@ -139,13 +139,53 @@
       infoEl.style.display = 'block';
       document.getElementById('info-name').textContent = selectedItem.name;
       document.getElementById('info-code').textContent = selectedItem.item_code + ' · ' + (CONFIG.CATEGORY_LABELS[selectedItem.category] || '');
-      document.getElementById('info-qty').textContent = (selectedItem.qty ?? '-') + ' ' + (selectedItem.unit || '');
+      
+      const statusBar = document.getElementById('info-status-bar');
+      const statusLabel = document.getElementById('info-status-label');
+      const qtyText = document.getElementById('info-qty');
+      const btnWithdraw = document.getElementById('btn-withdraw');
+
+      if (selectedItem.category === 'asset') {
+        statusLabel.textContent = 'สถานะปัจจุบัน';
+        const st = selectedItem.status || 'available';
+        qtyText.innerHTML = UI.renderBadge(st);
+        statusBar.className = st === 'assigned' || st === 'out' 
+          ? 'flex justify-between items-center p-3 bg-red-50 rounded-xl'
+          : 'flex justify-between items-center p-3 bg-blue-50 rounded-xl';
+        
+        document.getElementById('qty-group').style.display = 'none';
+        document.getElementById('w_qty').required = false;
+        document.getElementById('w_qty').value = '1'; // Force 1
+
+        if (st === 'assigned' || st === 'out') {
+          btnWithdraw.disabled = true;
+          btnWithdraw.innerHTML = '<i data-lucide="x-circle"></i> ถูกเบิกไปแล้ว';
+          btnWithdraw.classList.replace('btn-primary', 'btn-danger');
+        } else {
+          btnWithdraw.disabled = false;
+          btnWithdraw.innerHTML = '<i data-lucide="package-minus"></i> ยืนยันเบิกของ';
+          btnWithdraw.classList.replace('btn-danger', 'btn-primary');
+        }
+      } else {
+        statusLabel.textContent = 'คงเหลือ';
+        qtyText.textContent = (selectedItem.qty ?? '-') + ' ' + (selectedItem.unit || '');
+        statusBar.className = 'flex justify-between items-center p-3 bg-blue-50 rounded-xl';
+        
+        document.getElementById('qty-group').style.display = 'block';
+        document.getElementById('w_qty').required = true;
+        document.getElementById('w_qty').value = '';
+        document.getElementById('w_qty').max = selectedItem.qty || 9999;
+        
+        btnWithdraw.disabled = false;
+        btnWithdraw.innerHTML = '<i data-lucide="package-minus"></i> ยืนยันเบิกของ';
+        btnWithdraw.classList.replace('btn-danger', 'btn-primary');
+      }
+
       document.getElementById('info-icon').innerHTML = `<i data-lucide="${CONFIG.CATEGORY_ICONS[selectedItem.category] || 'package'}" style="color:${CONFIG.CATEGORY_COLORS[selectedItem.category]}"></i>`;
       lucide.createIcons();
 
       // Show form
       document.getElementById('withdraw-form').style.display = 'block';
-      document.getElementById('w_qty').max = selectedItem.qty || 9999;
     }
 
     // ── Submit withdraw ──
@@ -153,12 +193,12 @@
       e.preventDefault();
       if (!selectedItem) { UI.showToast('กรุณาเลือกรายการ', 'warning'); return; }
 
-      const qty = parseInt(document.getElementById('w_qty').value);
+      const qty = parseInt(document.getElementById('w_qty').value) || 1;
       const forWhom = document.getElementById('w_for_whom').value.trim();
       const jobRef = document.getElementById('w_job_ref').value.trim();
       const notes = document.getElementById('w_notes').value.trim();
 
-      if (qty > (selectedItem.qty || 0)) {
+      if (selectedItem.category !== 'asset' && qty > (selectedItem.qty || 0)) {
         document.getElementById('qty-error').style.display = 'block';
         return;
       }

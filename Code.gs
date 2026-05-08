@@ -265,15 +265,21 @@ function deleteItem(itemCode, currentUser) {
 
 function processWithdraw(payload, currentUser) {
   const item = getItem(payload.item_code);
-  const newQty = (Number(item.qty) || 0) - Number(payload.qty);
-  if (newQty < 0) throw new Error('จำนวนไม่พอเบิก');
-  
   const sheet = getSheet(TABS.ITEMS);
   const headers = getHeaders(TABS.ITEMS);
-  sheet.getRange(item._row, headers.indexOf('qty') + 1).setValue(newQty);
-  if (item.category !== 'consumable' && newQty === 0) sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('out');
+
+  if (item.category === 'asset') {
+    if (item.status === 'assigned' || item.status === 'out') throw new Error('ทรัพย์สินนี้ถูกเบิก/ใช้งานอยู่');
+    sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('assigned');
+    recordTransaction({ ...payload, action: 'assign', qty_before: 1, qty_change: 0, qty_after: 1, by_user: currentUser.full_name, item_category: item.category });
+  } else {
+    const newQty = (Number(item.qty) || 0) - Number(payload.qty);
+    if (newQty < 0) throw new Error('จำนวนไม่พอเบิก');
+    sheet.getRange(item._row, headers.indexOf('qty') + 1).setValue(newQty);
+    if (item.category !== 'consumable' && newQty === 0) sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('out');
+    recordTransaction({ ...payload, action: 'withdraw', qty_before: item.qty, qty_change: -payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
+  }
   
-  recordTransaction({ ...payload, action: 'withdraw', qty_before: item.qty, qty_change: -payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
   clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
