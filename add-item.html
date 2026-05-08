@@ -109,6 +109,8 @@
             <option value="other">อื่นๆ</option>
           </select>
         </div>
+        <div class="form-group"><label>จำนวนคงเหลือ</label><input type="number" id="g_qty" class="form-input" min="0" value="0"></div>
+        <div class="form-group"><label>จุดแจ้งเตือน (reorder point)</label><input type="number" id="g_reorder" class="form-input" min="0" value="0"></div>
         <div class="form-group"><label>ขนาด</label><input type="text" id="g_size" class="form-input" placeholder="เช่น 50L, 10kg"></div>
         <div class="form-group">
           <label>ระดับ</label>
@@ -175,6 +177,8 @@
           } else if (d.category === 'gas') {
             document.getElementById('g_tank_code').value = d.tank_code || '';
             document.getElementById('g_gas_type').value = d.gas_type || 'air';
+            document.getElementById('g_qty').value = d.qty || 0;
+            document.getElementById('g_reorder').value = d.reorder_point || 0;
             document.getElementById('g_size').value = d.size || '';
             document.getElementById('g_level').value = d.level || 'full';
             document.getElementById('g_owner').value = d.owner_company || '';
@@ -227,7 +231,7 @@
       } else if (category === 'consumable') {
         extra = { qty: +document.getElementById('c_qty').value, price_per_unit: +document.getElementById('c_price').value, reorder_point: +document.getElementById('c_reorder').value };
       } else if (category === 'gas') {
-        extra = { tank_code: document.getElementById('g_tank_code').value, gas_type: document.getElementById('g_gas_type').value, size: document.getElementById('g_size').value, level: document.getElementById('g_level').value, owner_company: document.getElementById('g_owner').value, status: 'in_stock' };
+        extra = { tank_code: document.getElementById('g_tank_code').value, gas_type: document.getElementById('g_gas_type').value, qty: +document.getElementById('g_qty').value, reorder_point: +document.getElementById('g_reorder').value, size: document.getElementById('g_size').value, level: document.getElementById('g_level').value, owner_company: document.getElementById('g_owner').value, status: 'in_stock' };
       }
 
       const fields = { ...common, ...extra };

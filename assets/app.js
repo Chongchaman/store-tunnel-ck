@@ -147,10 +147,12 @@ const App = {
         <div class="detail-row"><span>จุดสั่งซื้อ</span><span>${item.reorder_point || '-'}</span></div>`;
     } else if (item.category === 'gas') {
       detailFields = `
+        <div class="detail-row"><span>จำนวนคงเหลือ</span><span>${item.qty || 0} ${item.unit || ''}</span></div>
         <div class="detail-row"><span>รหัสถัง</span><span>${item.tank_code || '-'}</span></div>
         <div class="detail-row"><span>ชนิดแก๊ส</span><span>${CONFIG.GAS_TYPES[item.gas_type] || item.gas_type}</span></div>
         <div class="detail-row"><span>ขนาด</span><span>${item.size || '-'}</span></div>
         <div class="detail-row"><span>ระดับ</span><span>${CONFIG.GAS_LEVELS[item.level] || item.level}</span></div>
+        <div class="detail-row"><span>จุดสั่งซื้อ</span><span>${item.reorder_point || '-'}</span></div>
         <div class="detail-row"><span>บริษัทเจ้าของ</span><span>${item.owner_company || '-'}</span></div>
         <div class="detail-row"><span>สถานะ</span><span>${UI.renderBadge(item.status)}</span></div>`;
     }
@@ -174,6 +176,7 @@ const App = {
 
       <div class="detail-actions">
         ${canEdit ? `<a href="add-item.html?edit=${encodeURIComponent(item.item_code)}" class="btn btn-secondary"><i data-lucide="edit-3"></i> แก้ไข</a>` : ''}
+        ${canEdit && ['consumable','gas','rental'].includes(item.category) ? `<button onclick="App.showAdjustQtyModal('${item.item_code}', ${item.qty || 0})" class="btn btn-warning" style="background:#F59E0B;color:white;border:none;"><i data-lucide="sliders"></i> ปรับยอด</button>` : ''}
         ${canWithdraw && ['rental','consumable','gas'].includes(item.category) ? `<a href="withdraw.html?code=${encodeURIComponent(item.item_code)}" class="btn btn-primary"><i data-lucide="package-minus"></i> เบิก</a>` : ''}
         ${canWithdraw && item.category === 'asset' ? `<button onclick="App.showAssignModal('${item.item_code}')" class="btn btn-primary"><i data-lucide="user-plus"></i> มอบหมาย</button>` : ''}
         ${canWithdraw && item.category === 'rental' && item.status === 'out' ? `<a href="return.html?code=${encodeURIComponent(item.item_code)}" class="btn btn-success"><i data-lucide="package-plus"></i> คืน</a>` : ''}
@@ -218,6 +221,43 @@ const App = {
           <span class="tx-date">${UI.formatDateTime(tx.datetime)}</span>
         </div>
       </div>`).join('');
+  },
+
+  // ════════════════════════════════════════
+  // Adjust Qty Modal
+  // ════════════════════════════════════════
+  showAdjustQtyModal(itemCode, currentQty) {
+    const overlay = document.createElement('div');
+    overlay.className = 'stc-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:320px;width:100%">
+        <h3 style="margin:0 0 16px;font-size:18px;font-weight:700">ปรับปรุงยอดจำนวน</h3>
+        <p style="margin-bottom:12px;font-size:14px;color:#666">รหัส: ${itemCode}</p>
+        <div class="form-group">
+          <label>จำนวนคงเหลือปัจจุบัน</label>
+          <input type="number" id="adjust-qty-val" class="form-input" value="${currentQty}" min="0">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-ghost" onclick="this.closest('.stc-modal-overlay').remove()">ยกเลิก</button>
+          <button class="btn btn-primary" id="adjust-confirm-btn">บันทึก</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#adjust-confirm-btn').onclick = async () => {
+      const btn = overlay.querySelector('#adjust-confirm-btn');
+      UI.setBtnLoading(btn, true);
+      const newQty = document.getElementById('adjust-qty-val').value;
+      const res = await API.updateItem(itemCode, { qty: Number(newQty) });
+      if (res.ok) { 
+        UI.showToast('ปรับปรุงยอดสำเร็จ', 'success'); 
+        overlay.remove(); 
+        App.loadItemDetail(itemCode); 
+      } else { 
+        UI.showToast(res.error || 'ไม่สำเร็จ', 'error'); 
+        UI.setBtnLoading(btn, false);
+      }
+    };
   },
 
   // ════════════════════════════════════════

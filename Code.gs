@@ -189,9 +189,17 @@ function getDashboard(currentUser) {
   const alerts = [];
   const now = new Date();
   items.forEach(i => {
-    if (i.category === 'consumable' && Number(i.qty) <= (Number(i.reorder_point) || 5)) {
-      alerts.push({ type: 'danger', message: `ของใกล้หมด: ${i.name} (เหลือ ${i.qty})`, item_code: i.item_code });
+    // Alert สำหรับของที่มีปริมาณ (สิ้นเปลือง, ถังแก๊ส)
+    if (['consumable', 'gas'].includes(i.category)) {
+      let threshold = Number(i.reorder_point);
+      // ถ้าไม่ได้ตั้งค่า reorder_point ให้ใช้ค่าเริ่มต้น (สิ้นเปลือง 5, แก๊ส 0)
+      if (isNaN(threshold)) threshold = i.category === 'consumable' ? 5 : 0;
+      
+      if (Number(i.qty) <= threshold) {
+        alerts.push({ type: 'danger', message: `ของใกล้หมด: ${i.name} (เหลือ ${i.qty} ${i.unit || ''})`, item_code: i.item_code });
+      }
     }
+    // Alert สำหรับของเช่า
     if (i.category === 'rental' && i.due_date && i.status === 'in_stock' && new Date(i.due_date) < now) {
       alerts.push({ type: 'danger', message: `เลยกำหนดคืน: ${i.name}`, item_code: i.item_code });
     }
