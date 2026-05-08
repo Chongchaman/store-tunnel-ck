@@ -128,7 +128,7 @@
       document.getElementById('item-search').value = '';
       
       // Check if already in cart
-      if (cart.find(i => i.item_code === item.item_code)) {
+      if (cart.find(i => String(i.item_code) === String(item.item_code))) {
         UI.showToast('รายการนี้อยู่ในรายการเบิกแล้ว', 'info');
         return;
       }
