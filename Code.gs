@@ -86,6 +86,16 @@ function getSheet(sheetName) {
 }
 
 function getSheetData(sheetName) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'STORE_TUNNEL_DATA_' + sheetName;
+  const cached = cache.get(cacheKey);
+  
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch(e) {}
+  }
+
   const sheet = getSheet(sheetName);
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
@@ -95,11 +105,28 @@ function getSheetData(sheetName) {
   for (let i = 1; i < data.length; i++) {
     let obj = { _row: i + 1 };
     for (let j = 0; j < headers.length; j++) {
-      obj[headers[j]] = data[i][j];
+      let val = data[i][j];
+      // Convert Date objects to ISO string for consistent caching
+      if (val instanceof Date) {
+        val = val.toISOString();
+      }
+      obj[headers[j]] = val;
     }
     rows.push(obj);
   }
+  
+  try {
+    const jsonStr = JSON.stringify(rows);
+    if (jsonStr.length < 100000) { // Limit CacheService max 100KB
+      cache.put(cacheKey, jsonStr, 600); // Cache 10 minutes
+    }
+  } catch(e) {}
+
   return rows;
+}
+
+function clearSheetCache(sheetName) {
+  CacheService.getScriptCache().remove('STORE_TUNNEL_DATA_' + sheetName);
 }
 
 function getHeaders(sheetName) {
@@ -137,6 +164,7 @@ function doLogin({ username, password }) {
   sheet.getRange(user._row, headers.indexOf('token') + 1).setValue(token);
   sheet.getRange(user._row, headers.indexOf('token_expiry') + 1).setValue(expiry.toISOString());
 
+  clearSheetCache(TABS.USERS);
   return { token, user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role } };
 }
 
@@ -201,6 +229,7 @@ function addItem(item_data, currentUser) {
     return item_data[h] || '';
   });
   sheet.appendRow(newRow);
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -214,6 +243,7 @@ function updateItem(update_data, currentUser) {
     if (idx > -1) sheet.getRange(item._row, idx + 1).setValue(update_data[key]);
   }
   sheet.getRange(item._row, headers.indexOf('updated_at') + 1).setValue(new Date().toISOString());
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -221,6 +251,7 @@ function deleteItem(itemCode, currentUser) {
   const item = getSheetData(TABS.ITEMS).find(i => String(i.item_code) === String(itemCode));
   if (!item) throw new Error('Item not found');
   getSheet(TABS.ITEMS).deleteRow(item._row);
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -235,6 +266,7 @@ function processWithdraw(payload, currentUser) {
   if (item.category !== 'consumable' && newQty === 0) sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('out');
   
   recordTransaction({ ...payload, action: 'withdraw', qty_before: item.qty, qty_change: -payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -247,6 +279,7 @@ function processReturn(payload, currentUser) {
   sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('in_stock');
   
   recordTransaction({ ...payload, action: 'return', qty_before: item.qty, qty_change: payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -258,6 +291,7 @@ function processRestock(payload, currentUser) {
   sheet.getRange(item._row, headers.indexOf('qty') + 1).setValue(newQty);
   
   recordTransaction({ ...payload, action: 'restock', qty_before: item.qty, qty_change: payload.qty, qty_after: newQty, by_user: currentUser.full_name, item_category: item.category });
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -268,6 +302,7 @@ function processAssignAsset(payload, currentUser) {
   sheet.getRange(item._row, headers.indexOf('status') + 1).setValue('assigned');
   
   recordTransaction({ item_code: payload.asset_code, action: 'assign', qty_before: 1, qty_change: 0, qty_after: 1, by_user: currentUser.full_name, for_whom: payload.emp_name, item_category: item.category });
+  clearSheetCache(TABS.ITEMS);
   return { success: true };
 }
 
@@ -280,6 +315,7 @@ function recordTransaction(tx) {
     return tx[h] || '';
   });
   sheet.appendRow(row);
+  clearSheetCache(TABS.TRANSACTIONS);
 }
 
 function listTransactions(filters) {
@@ -301,6 +337,7 @@ function addUser(userData) {
     return userData[h] || '';
   });
   sheet.appendRow(row);
+  clearSheetCache(TABS.USERS);
   return { success: true };
 }
 
@@ -318,6 +355,7 @@ function updateSettings(settings) {
     if (row) sheet.getRange(row._row, 2).setValue(settings[key]);
     else sheet.appendRow([key, settings[key]]);
   }
+  clearSheetCache(TABS.SETTINGS);
   return { success: true };
 }
 
