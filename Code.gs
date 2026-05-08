@@ -45,6 +45,7 @@ function doPost(e) {
       case 'update_item': resData = updateItem(payload, currentUser); break;
       case 'delete_item': resData = deleteItem(payload.item_code, currentUser); break;
       case 'withdraw': resData = processWithdraw(payload, currentUser); break;
+      case 'withdraw_batch': resData = processWithdrawBatch(payload, currentUser); break;
       case 'return_rental': resData = processReturn(payload, currentUser); break;
       case 'restock': resData = processRestock(payload, currentUser); break;
       case 'assign_asset': resData = processAssignAsset(payload, currentUser); break;
@@ -281,6 +282,57 @@ function processWithdraw(payload, currentUser) {
   }
   
   clearSheetCache(TABS.ITEMS);
+  return { success: true };
+}
+
+function processWithdrawBatch(payload, currentUser) {
+  const sheet = getSheet(TABS.ITEMS);
+  const headers = getHeaders(TABS.ITEMS);
+  const allItemsData = getSheetData(TABS.ITEMS);
+  
+  const updates = [];
+  const transactions = [];
+  
+  for (const req of payload.items) {
+    const item = allItemsData.find(i => String(i.item_code) === String(req.item_code));
+    if (!item) throw new Error(`ไม่พบรายการ ${req.item_code}`);
+    
+    if (item.category === 'asset') {
+      if (item.status === 'assigned' || item.status === 'out') {
+        throw new Error(`ทรัพย์สิน ${item.name} ถูกเบิกไปแล้ว`);
+      }
+      updates.push({ row: item._row, col: headers.indexOf('status') + 1, val: 'assigned' });
+      transactions.push({ item_code: item.item_code, action: 'assign', qty_before: 1, qty_change: 0, qty_after: 1, by_user: currentUser.full_name, for_whom: payload.for_whom, job_ref: payload.job_ref, notes: payload.notes, item_category: item.category });
+    } else {
+      const newQty = (Number(item.qty) || 0) - Number(req.qty);
+      if (newQty < 0) throw new Error(`ยอดคงเหลือไม่พอสำหรับ ${item.name}`);
+      
+      updates.push({ row: item._row, col: headers.indexOf('qty') + 1, val: newQty });
+      if (item.category !== 'consumable' && newQty === 0) {
+        updates.push({ row: item._row, col: headers.indexOf('status') + 1, val: 'out' });
+      }
+      transactions.push({ item_code: item.item_code, action: 'withdraw', qty_before: item.qty, qty_change: -req.qty, qty_after: newQty, by_user: currentUser.full_name, for_whom: payload.for_whom, job_ref: payload.job_ref, notes: payload.notes, item_category: item.category });
+    }
+  }
+  
+  updates.forEach(u => sheet.getRange(u.row, u.col).setValue(u.val));
+  
+  const txSheet = getSheet(TABS.TRANSACTIONS);
+  const txHeaders = getHeaders(TABS.TRANSACTIONS);
+  const nowStr = new Date().toISOString();
+  
+  const rowsToAppend = transactions.map(tx => txHeaders.map(h => {
+    if (h === 'tx_id') return 'TX-' + Date.now() + Math.floor(Math.random()*1000);
+    if (h === 'datetime') return nowStr;
+    return tx[h] || '';
+  }));
+  
+  if (rowsToAppend.length > 0) {
+    txSheet.getRange(txSheet.getLastRow() + 1, 1, rowsToAppend.length, txHeaders.length).setValues(rowsToAppend);
+  }
+  
+  clearSheetCache(TABS.ITEMS);
+  clearSheetCache(TABS.TRANSACTIONS);
   return { success: true };
 }
 

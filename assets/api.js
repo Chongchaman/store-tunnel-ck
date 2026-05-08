@@ -85,7 +85,24 @@ const API = {
   addItem(cat, fields) { return this.call('add_item', { category: cat, ...fields }); },
   updateItem(code, f)  { return this.call('update_item', { item_code: code, ...f }); },
   deleteItem(code)     { return this.call('delete_item', { item_code: code }); },
-  withdraw(code, qty, forWhom, jobRef, notes) { return this.call('withdraw', { item_code: code, qty, for_whom: forWhom, job_ref: jobRef, notes }); },
+  withdraw(itemCode, qty, forWhom, jobRef, notes) {
+    return this.call('withdraw', {
+      item_code: itemCode,
+      qty,
+      for_whom: forWhom,
+      job_ref: jobRef,
+      notes,
+    });
+  },
+
+  withdrawBatch(items, forWhom, jobRef, notes) {
+    return this.call('withdraw_batch', {
+      items, // array of { item_code, qty }
+      for_whom: forWhom,
+      job_ref: jobRef,
+      notes,
+    });
+  },
   returnRental(code, qty, date, cond, notes) { return this.call('return_rental', { item_code: code, qty, return_date: date, condition: cond, notes }); },
   restock(code, qty, notes)      { return this.call('restock', { item_code: code, qty, notes }); },
   assignAsset(code, empId, name) { return this.call('assign_asset', { asset_code: code, emp_id: empId, emp_name: name }); },

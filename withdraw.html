@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>เบิกของ — STORE TUNNEL CK</title>
+  <title>เบิกของ (หลายรายการ) — STORE TUNNEL CK</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .cart-item { transition: all 0.2s; }
+  </style>
 </head>
 <body class="bg-gray-50 font-sans pb-20">
   <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
@@ -20,8 +23,8 @@
 
   <main class="px-4 py-4 max-w-lg mx-auto">
     <!-- Item Selector -->
-    <div class="bg-white rounded-2xl p-4 mb-4">
-      <label class="text-sm font-bold text-gray-600 mb-2 block">เลือกรายการ</label>
+    <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <label class="text-sm font-bold text-gray-600 mb-2 block">ค้นหารายการเพื่อเบิก</label>
       <div class="flex gap-2">
         <div class="search-box flex-1">
           <i data-lucide="search" class="search-icon"></i>
@@ -32,45 +35,33 @@
       <div id="search-results" class="mt-2 max-h-48 overflow-y-auto" style="display:none"></div>
     </div>
 
-    <!-- Selected Item Info -->
-    <div id="item-info" class="bg-white rounded-2xl p-4 mb-4" style="display:none">
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center" id="info-icon"></div>
-        <div>
-          <p class="font-bold text-gray-800" id="info-name"></p>
-          <p class="text-xs text-gray-400" id="info-code"></p>
-        </div>
-      </div>
-      <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl" id="info-status-bar">
-        <span class="text-sm text-blue-700" id="info-status-label">คงเหลือ</span>
-        <span class="text-lg font-bold text-blue-700" id="info-qty"></span>
-      </div>
-    </div>
+    <!-- Cart Items -->
+    <div id="cart-container" style="display:none">
+      <h2 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+        <i data-lucide="shopping-cart" class="w-4 h-4 text-primary"></i> รายการที่เลือก (<span id="cart-count">0</span>)
+      </h2>
+      <div id="cart-items" class="space-y-3 mb-4"></div>
 
-    <!-- Withdraw Form -->
-    <form id="withdraw-form" class="bg-white rounded-2xl p-4" style="display:none">
-      <div class="form-group" id="qty-group">
-        <label>จำนวนที่เบิก <span class="text-red-500">*</span></label>
-        <input type="number" id="w_qty" class="form-input" min="1" required placeholder="0">
-        <p class="form-error" id="qty-error">จำนวนเกินคงเหลือ</p>
-      </div>
-      <div class="form-group">
-        <label>เบิกให้ใคร <span class="text-red-500">*</span></label>
-        <input type="text" id="w_for_whom" class="form-input" required placeholder="ชื่อผู้รับ หรือเลือกจาก list" list="workers-list">
-        <datalist id="workers-list"></datalist>
-      </div>
-      <div class="form-group">
-        <label>งาน / Job Reference</label>
-        <input type="text" id="w_job_ref" class="form-input" placeholder="เช่น ST-001, งานเทพื้น Zone A">
-      </div>
-      <div class="form-group">
-        <label>หมายเหตุ</label>
-        <textarea id="w_notes" class="form-input" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary w-full justify-center" id="btn-withdraw">
-        <i data-lucide="package-minus"></i> ยืนยันเบิกของ
-      </button>
-    </form>
+      <!-- Withdraw Form -->
+      <form id="withdraw-form" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mt-4">
+        <div class="form-group">
+          <label>เบิกให้ใคร <span class="text-red-500">*</span></label>
+          <input type="text" id="w_for_whom" class="form-input" required placeholder="ชื่อผู้รับ หรือเลือกจาก list" list="workers-list">
+          <datalist id="workers-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label>งาน / Job Reference</label>
+          <input type="text" id="w_job_ref" class="form-input" placeholder="เช่น ST-001, งานเทพื้น Zone A">
+        </div>
+        <div class="form-group">
+          <label>หมายเหตุ</label>
+          <textarea id="w_notes" class="form-input" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary w-full justify-center mt-2" id="btn-withdraw">
+          <i data-lucide="check-circle"></i> ยืนยันเบิกของทั้งหมด
+        </button>
+      </form>
+    </div>
   </main>
 
   <div id="bottom-nav"></div>
@@ -83,11 +74,11 @@
   <script>
     if (!Auth.requireAuth(['Admin', 'Store'])) throw new Error('Unauthorized');
 
-    let selectedItem = null;
+    let cart = []; // Array of selected items
 
     // ── Pre-fill from URL param ──
     const preCode = App.getParam('code');
-    if (preCode) selectItem(preCode);
+    if (preCode) selectItemByCode(preCode);
 
     // ── Load workers list ──
     (async () => {
@@ -113,7 +104,7 @@
         const container = document.getElementById('search-results');
         if (res.ok && res.data && res.data.length > 0) {
           container.innerHTML = res.data.map(item => `
-            <div class="p-3 hover:bg-gray-50 cursor-pointer rounded-xl flex justify-between items-center border-b border-gray-50" onclick="selectItem('${item.item_code}')">
+            <div class="p-3 hover:bg-gray-50 cursor-pointer rounded-xl flex justify-between items-center border-b border-gray-50" onclick="selectItemObj(${JSON.stringify(item).replace(/"/g, '&quot;')})">
               <div><p class="text-sm font-semibold">${item.name}</p><p class="text-xs text-gray-400">${item.item_code} · ${CONFIG.CATEGORY_LABELS[item.category]}</p></div>
               <span class="text-sm font-bold text-gray-600">${item.qty ?? '-'}</span>
             </div>
@@ -126,94 +117,138 @@
       }, 400);
     });
 
-    // ── Select item ──
-    async function selectItem(code) {
+    async function selectItemByCode(code) {
       const res = await API.getItem(code);
       if (!res.ok) { UI.showToast('ไม่พบรายการ', 'error'); return; }
-      selectedItem = res.data;
+      selectItemObj(res.data);
+    }
+
+    function selectItemObj(item) {
       document.getElementById('search-results').style.display = 'none';
-      document.getElementById('item-search').value = `${selectedItem.name} (${selectedItem.item_code})`;
-
-      // Show info
-      const infoEl = document.getElementById('item-info');
-      infoEl.style.display = 'block';
-      document.getElementById('info-name').textContent = selectedItem.name;
-      document.getElementById('info-code').textContent = selectedItem.item_code + ' · ' + (CONFIG.CATEGORY_LABELS[selectedItem.category] || '');
+      document.getElementById('item-search').value = '';
       
-      const statusBar = document.getElementById('info-status-bar');
-      const statusLabel = document.getElementById('info-status-label');
-      const qtyText = document.getElementById('info-qty');
-      const btnWithdraw = document.getElementById('btn-withdraw');
-
-      if (selectedItem.category === 'asset') {
-        statusLabel.textContent = 'สถานะปัจจุบัน';
-        const st = selectedItem.status || 'available';
-        qtyText.innerHTML = UI.renderBadge(st);
-        statusBar.className = st === 'assigned' || st === 'out' 
-          ? 'flex justify-between items-center p-3 bg-red-50 rounded-xl'
-          : 'flex justify-between items-center p-3 bg-blue-50 rounded-xl';
-        
-        document.getElementById('qty-group').style.display = 'none';
-        document.getElementById('w_qty').required = false;
-        document.getElementById('w_qty').value = '1'; // Force 1
-
-        if (st === 'assigned' || st === 'out') {
-          btnWithdraw.disabled = true;
-          btnWithdraw.innerHTML = '<i data-lucide="x-circle"></i> ถูกเบิกไปแล้ว';
-          btnWithdraw.classList.replace('btn-primary', 'btn-danger');
-        } else {
-          btnWithdraw.disabled = false;
-          btnWithdraw.innerHTML = '<i data-lucide="package-minus"></i> ยืนยันเบิกของ';
-          btnWithdraw.classList.replace('btn-danger', 'btn-primary');
-        }
-      } else {
-        statusLabel.textContent = 'คงเหลือ';
-        qtyText.textContent = (selectedItem.qty ?? '-') + ' ' + (selectedItem.unit || '');
-        statusBar.className = 'flex justify-between items-center p-3 bg-blue-50 rounded-xl';
-        
-        document.getElementById('qty-group').style.display = 'block';
-        document.getElementById('w_qty').required = true;
-        document.getElementById('w_qty').value = '';
-        document.getElementById('w_qty').max = selectedItem.qty || 9999;
-        
-        btnWithdraw.disabled = false;
-        btnWithdraw.innerHTML = '<i data-lucide="package-minus"></i> ยืนยันเบิกของ';
-        btnWithdraw.classList.replace('btn-danger', 'btn-primary');
+      // Check if already in cart
+      if (cart.find(i => i.item_code === item.item_code)) {
+        UI.showToast('รายการนี้อยู่ในรายการเบิกแล้ว', 'info');
+        return;
       }
 
-      document.getElementById('info-icon').innerHTML = `<i data-lucide="${CONFIG.CATEGORY_ICONS[selectedItem.category] || 'package'}" style="color:${CONFIG.CATEGORY_COLORS[selectedItem.category]}"></i>`;
-      lucide.createIcons();
+      // If asset and not available
+      if (item.category === 'asset' && (item.status === 'assigned' || item.status === 'out')) {
+        UI.showToast(`ทรัพย์สิน ${item.name} ถูกเบิกไปแล้ว`, 'error');
+        return;
+      }
 
-      // Show form
-      document.getElementById('withdraw-form').style.display = 'block';
+      // If zero stock
+      if (item.category !== 'asset' && (item.qty || 0) <= 0) {
+        UI.showToast(`รายการ ${item.name} ของหมด`, 'warning');
+        return;
+      }
+
+      // Add to cart
+      item.withdrawQty = 1; // default
+      cart.unshift(item);
+      renderCart();
+    }
+
+    function removeFromCart(code) {
+      cart = cart.filter(i => i.item_code !== code);
+      renderCart();
+    }
+
+    function updateCartQty(code, qty) {
+      const item = cart.find(i => i.item_code === code);
+      if (item) item.withdrawQty = parseInt(qty) || 1;
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cart-container');
+      const list = document.getElementById('cart-items');
+      document.getElementById('cart-count').textContent = cart.length;
+
+      if (cart.length === 0) {
+        container.style.display = 'none';
+        list.innerHTML = '';
+        return;
+      }
+
+      container.style.display = 'block';
+      list.innerHTML = cart.map(item => {
+        const isAsset = item.category === 'asset';
+        const maxQty = item.qty || 9999;
+        const iconColor = CONFIG.CATEGORY_COLORS[item.category] || '#6B7280';
+        
+        return `
+        <div class="cart-item bg-white p-3 rounded-2xl border border-gray-100 flex flex-col gap-2 relative shadow-sm">
+          <button type="button" onclick="removeFromCart('${item.item_code}')" class="absolute top-3 right-3 text-red-400 hover:text-red-600 bg-red-50 w-7 h-7 flex items-center justify-center rounded-lg">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+          
+          <div class="flex items-start gap-3 pr-8">
+            <div class="w-10 h-10 rounded-xl flex flex-shrink-0 items-center justify-center" style="background:${iconColor}15;color:${iconColor}">
+              <i data-lucide="${CONFIG.CATEGORY_ICONS[item.category] || 'package'}" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <p class="font-bold text-gray-800 text-sm leading-tight">${item.name}</p>
+              <p class="text-xs text-gray-400">${item.item_code}</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between mt-1 bg-gray-50 p-2 rounded-xl">
+            <span class="text-xs font-semibold text-gray-500">
+              ${isAsset ? 'สถานะ: ' + UI.renderBadge(item.status || 'available') : 'คงเหลือ: ' + (item.qty ?? '-')}
+            </span>
+            ${isAsset ? `
+              <span class="text-sm font-bold text-primary px-3">ระบุ 1 สิทธิ์</span>
+            ` : `
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500 font-bold">จำนวนเบิก:</label>
+                <input type="number" class="form-input text-center py-1 px-2 font-bold text-primary !bg-white" 
+                  style="width:70px;min-height:32px" 
+                  min="1" max="${maxQty}" value="${item.withdrawQty}" 
+                  onchange="updateCartQty('${item.item_code}', this.value)">
+              </div>
+            `}
+          </div>
+        </div>`;
+      }).join('');
+      
+      lucide.createIcons();
     }
 
     // ── Submit withdraw ──
     document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!selectedItem) { UI.showToast('กรุณาเลือกรายการ', 'warning'); return; }
+      if (cart.length === 0) { UI.showToast('กรุณาเลือกรายการ', 'warning'); return; }
 
-      const qty = parseInt(document.getElementById('w_qty').value) || 1;
+      // Validate quantities
+      for (const item of cart) {
+        if (item.category !== 'asset' && item.withdrawQty > (item.qty || 0)) {
+          UI.showToast(`ยอดคงเหลือของ ${item.name} ไม่พอ`, 'error');
+          return;
+        }
+      }
+
       const forWhom = document.getElementById('w_for_whom').value.trim();
       const jobRef = document.getElementById('w_job_ref').value.trim();
       const notes = document.getElementById('w_notes').value.trim();
-
-      if (selectedItem.category !== 'asset' && qty > (selectedItem.qty || 0)) {
-        document.getElementById('qty-error').style.display = 'block';
-        return;
-      }
-      document.getElementById('qty-error').style.display = 'none';
 
       if (!forWhom) { UI.showToast('กรุณาระบุผู้รับ', 'warning'); return; }
 
       const btn = document.getElementById('btn-withdraw');
       UI.setBtnLoading(btn, true);
 
-      const res = await API.withdraw(selectedItem.item_code, qty, forWhom, jobRef, notes);
+      // Prepare payload
+      const itemsPayload = cart.map(i => ({ item_code: i.item_code, qty: i.category === 'asset' ? 1 : i.withdrawQty }));
+
+      const res = await API.withdrawBatch(itemsPayload, forWhom, jobRef, notes);
       UI.setBtnLoading(btn, false);
 
       if (res.ok) {
-        UI.showToast(`เบิก ${selectedItem.name} จำนวน ${qty} สำเร็จ`, 'success');
+        UI.showToast(`เบิกของสำเร็จ ${cart.length} รายการ`, 'success');
+        cart = [];
+        renderCart();
+        document.getElementById('w_notes').value = '';
         setTimeout(() => window.location.href = 'items.html', 1200);
       } else {
         UI.showToast(res.error || 'เบิกไม่สำเร็จ', 'error');
