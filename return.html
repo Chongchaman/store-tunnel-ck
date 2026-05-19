@@ -136,15 +136,28 @@
     let allItems = [];
     let selectedItem = null;
     let currentFilter = 'all';
+    let workerMap = {}; // item_code -> worker name
 
     document.getElementById('ret_date').value = dayjs().format('YYYY-MM-DD');
 
-    // ── Load checked-out items ──
+    // ── Load checked-out items + worker holdings in parallel ──
     (async () => {
-      const res = await API.listItems();
+      const [res, holdingsRes] = await Promise.all([
+        API.listItems(),
+        API.getWorkerHoldings()
+      ]);
       document.getElementById('skeleton').style.display = 'none';
 
       if (!res.ok || !res.data) { UI.showToast('โหลดข้อมูลไม่สำเร็จ', 'error'); return; }
+
+      // Build worker map: item_code -> worker_name
+      if (holdingsRes.ok && holdingsRes.data) {
+        holdingsRes.data.forEach(group => {
+          group.items.forEach(item => {
+            workerMap[String(item.item_code)] = group.worker_name;
+          });
+        });
+      }
 
       allItems = res.data.filter(i =>
         (i.category === 'asset'  && i.status === 'assigned') ||
@@ -223,9 +236,10 @@
                   ${statusLbl[item.status] || item.status}
                 </span>
               </div>
-              <div class="flex items-center gap-2 mt-1">
+              <div class="flex items-center gap-2 mt-1 flex-wrap">
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:${color}18;color:${color}">${catLabels[item.category] || item.category}</span>
                 <span class="text-xs text-gray-400">${item.item_code}</span>
+                ${workerMap[String(item.item_code)] ? `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">👤 ${workerMap[String(item.item_code)]}</span>` : ''}
                 ${item.category !== 'asset' ? `<span class="text-xs text-gray-400 ml-auto">คงเหลือ <b>${item.qty ?? 0}</b> ${item.unit || ''}</span>` : ''}
               </div>
             </div>

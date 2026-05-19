@@ -118,6 +118,7 @@ const API = {
   updateSettings(s)              { return this.call('update_settings', s); },
   lookupBarcode(v)               { return this.call('lookup_barcode', { barcode_value: v }); },
   listWorkers()                  { return this.call('list_workers', {}); },
+  getWorkerHoldings()            { return this.call('get_worker_holdings', {}); },
 };
 
 // Warmup ทุกหน้าที่โหลด

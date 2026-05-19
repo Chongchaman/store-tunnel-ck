@@ -56,6 +56,7 @@ function doPost(e) {
       case 'get_settings': resData = getSettings(); break;
       case 'update_settings': resData = updateSettings(payload, currentUser); break;
       case 'list_workers': resData = listWorkers(); break;
+      case 'get_worker_holdings': resData = getWorkerHoldings(); break;
       case 'get_report': resData = generateReport(payload, currentUser); break;
       case 'reset_password': resData = resetPassword(payload, currentUser); break;
       default:
