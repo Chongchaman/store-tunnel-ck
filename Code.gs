@@ -397,6 +397,31 @@ function listTransactions(filters) {
   return data.sort((a,b) => new Date(b.datetime) - new Date(a.datetime)).slice(0, 50);
 }
 
+function getWorkerHoldings() {
+  const items = getSheetData(TABS.ITEMS);
+  const txs = getSheetData(TABS.TRANSACTIONS);
+  
+  const result = {};
+  
+  items.forEach(item => {
+    if ((item.category === 'asset' && item.status === 'assigned') || 
+        (item.category === 'rental' && item.status === 'out')) {
+        
+       const reversedTxs = [...txs].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+       const lastTx = reversedTxs.find(t => String(t.item_code) === String(item.item_code) && (t.action === 'assign' || t.action === 'withdraw'));
+       
+       const worker = (lastTx && lastTx.for_whom) ? lastTx.for_whom : 'ไม่ระบุชื่อ';
+       if (!result[worker]) result[worker] = [];
+       result[worker].push(item);
+    }
+  });
+  
+  return Object.keys(result).map(worker => ({
+     worker_name: worker,
+     items: result[worker]
+  })).sort((a,b) => a.worker_name.localeCompare(b.worker_name));
+}
+
 function listUsers() { return getSheetData(TABS.USERS).map(u => ({ id: u.id, username: u.username, full_name: u.full_name, role: u.role, active: u.active })); }
 
 function addUser(userData) {
@@ -434,7 +459,66 @@ function updateSettings(settings) {
 
 function listWorkers() { return getSheetData(TABS.USERS).map(u => ({ full_name: u.full_name })); }
 
-function generateReport(payload) { return { headers: ['รหัส', 'ชื่อ', 'คงเหลือ'], rows: getSheetData(TABS.ITEMS).map(i => [i.item_code, i.name, i.qty]) }; }
+function generateReport(payload) {
+  const type = payload.report_type;
+  const items = getSheetData(TABS.ITEMS);
+  const txs = getSheetData(TABS.TRANSACTIONS);
+  const catMap = { asset: 'ทรัพย์สิน', consumable: 'สิ้นเปลือง', gas: 'ลม/แก๊ส', rental: 'ของเช่า' };
+  
+  if (type === 'asset_by_person') {
+    txs.sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+    const result = {};
+    items.forEach(item => {
+      if ((item.category === 'asset' && item.status === 'assigned') || 
+          (item.category === 'rental' && item.status === 'out')) {
+         const reversedTxs = [...txs].reverse();
+         const lastTx = reversedTxs.find(t => String(t.item_code) === String(item.item_code) && (t.action === 'assign' || t.action === 'withdraw'));
+         const worker = (lastTx && lastTx.for_whom) ? lastTx.for_whom : 'ไม่ระบุชื่อ (No Name)';
+         if (!result[worker]) result[worker] = [];
+         result[worker].push(item);
+      }
+    });
+    
+    const rows = [];
+    Object.keys(result).sort((a,b) => a.localeCompare(b)).forEach(worker => {
+      result[worker].forEach(item => {
+        rows.push([worker, item.item_code, item.name, catMap[item.category] || item.category]);
+      });
+    });
+    return { headers: ['ผู้รับผิดชอบ / ช่าง', 'รหัสสินค้า', 'ชื่อรายการ', 'ประเภท'], rows };
+  }
+  
+  if (type === 'stock_all') {
+    const rows = items.map(i => [i.item_code, i.name, catMap[i.category] || i.category, i.qty || 0, i.unit || '']);
+    return { headers: ['รหัส', 'ชื่อ', 'หมวดหมู่', 'คงเหลือ', 'หน่วย'], rows };
+  }
+  
+  if (type === 'low_stock') {
+    const rows = items.filter(i => (i.category === 'consumable' || i.category === 'gas') && (Number(i.qty) || 0) <= (Number(i.reorder_point) || 0))
+      .map(i => [i.item_code, i.name, i.qty || 0, i.reorder_point || 0]);
+    return { headers: ['รหัส', 'ชื่อ', 'คงเหลือ', 'จุดสั่งซื้อ (Reorder)'], rows };
+  }
+  
+  if (type === 'monthly_summary') {
+    const month = payload.month || new Date().toISOString().slice(0, 7);
+    const filteredTxs = txs.filter(t => t.datetime && t.datetime.startsWith(month));
+    const rows = filteredTxs.map(t => {
+      const dateStr = t.datetime.split('T')[0];
+      const actionMap = { withdraw: 'เบิก', assign: 'มอบหมาย(ทรัพย์สิน)', return: 'คืน', restock: 'รับเข้า', adjust: 'ปรับยอด' };
+      return [dateStr, actionMap[t.action] || t.action, t.item_code, t.qty_change, t.by_user, t.for_whom || ''];
+    });
+    return { headers: ['วันที่', 'ประเภทรายการ', 'รหัส', 'จำนวน', 'ผู้ทำรายการ', 'ช่างที่เกี่ยวข้อง'], rows };
+  }
+  
+  if (type === 'overdue_rental') {
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = items.filter(i => i.category === 'rental' && i.status === 'out' && i.due_date && i.due_date < today);
+    const rows = overdue.map(i => [i.item_code, i.name, i.qty || 0, i.rent_date || '', i.due_date || '']);
+    return { headers: ['รหัส', 'ชื่อ', 'จำนวนที่ค้าง', 'วันที่เช่า', 'ครบกำหนด'], rows };
+  }
+
+  return { headers: ['รหัส', 'ชื่อ', 'คงเหลือ'], rows: items.map(i => [i.item_code, i.name, i.qty]) };
+}
 
 function setupDatabase() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
