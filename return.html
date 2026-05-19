@@ -148,7 +148,7 @@
 
       allItems = res.data.filter(i =>
         (i.category === 'asset'  && i.status === 'assigned') ||
-        (i.category === 'rental' && (i.status === 'out' || i.status === 'in_stock'))
+        (i.category === 'rental' && i.status === 'out')
       );
 
       // Pre-select from URL
