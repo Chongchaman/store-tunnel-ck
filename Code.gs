@@ -79,6 +79,58 @@ function response(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ─── KEEP-ALIVE (ป้องกัน Cold Start) ───────────────────────────────────────
+// รัน keepAlive() ทุก 10 นาที ผ่าน Time-based Trigger
+// วิธีใช้: รัน setupKeepAliveTrigger() ครั้งเดียวใน Apps Script Editor
+//          แล้วมันจะตั้ง Trigger ให้อัตโนมัติ
+// ─────────────────────────────────────────────────────────────────────────────
+function keepAlive() {
+  // อ่านข้อมูลเล็กน้อยเพื่อ warm-up script runtime และ cache
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    ss.getName(); // lightweight call เพื่อให้ runtime ตื่นตัว
+    
+    // Pre-warm cache ของ Items (ข้อมูลที่ใช้บ่อยที่สุด)
+    const cache = CacheService.getScriptCache();
+    const cacheKey = 'STORE_TUNNEL_DATA_Items';
+    if (!cache.get(cacheKey)) {
+      // ถ้า cache หมดแล้ว ให้โหลดใหม่ไว้ล่วงหน้า
+      const sheet = ss.getSheetByName('Items');
+      if (sheet && sheet.getLastRow() > 1) {
+        const data = sheet.getDataRange().getValues();
+        const headers = data[0];
+        const rows = data.slice(1).map((row, idx) => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = row[i]; });
+          obj._row = idx + 2;
+          return obj;
+        });
+        try {
+          cache.put(cacheKey, JSON.stringify(rows), 600);
+        } catch(e) {}
+      }
+    }
+    console.log('[KeepAlive] Script warmed up at ' + new Date().toISOString());
+  } catch(err) {
+    console.error('[KeepAlive] Error:', err.message);
+  }
+}
+
+function setupKeepAliveTrigger() {
+  // ลบ Trigger เก่าที่ชื่อ keepAlive ออกก่อน (ป้องกันซ้ำ)
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'keepAlive')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  // สร้าง Trigger ใหม่: รัน keepAlive() ทุก 10 นาที
+  ScriptApp.newTrigger('keepAlive')
+    .timeBased()
+    .everyMinutes(10)
+    .create();
+
+  console.log('✅ Keep-alive trigger set! Script จะ warm-up ทุก 10 นาทีอัตโนมัติ');
+}
+
 // ─── DATABASE UTILS ───
 function getSheet(sheetName) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
