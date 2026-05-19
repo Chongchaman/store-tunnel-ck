@@ -3,82 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>คืนของ (เช่า/ทรัพย์สิน) — STORE TUNNEL CK</title>
+  <title>คืนของ — STORE TUNNEL CK</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config={theme:{extend:{colors:{primary:{DEFAULT:'#FF6B35',dark:'#E55A2B',light:'#FF8F66','50':'#FFF3ED'},secondary:{DEFAULT:'#1E40AF',light:'#3B82F6'}},fontFamily:{sans:['"IBM Plex Sans Thai"','sans-serif']}}}}</script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .item-card { transition: all 0.2s ease; }
+    .item-card:active { transform: scale(0.98); }
+    .filter-tab {
+      display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+      font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 999px;
+      border: 1.5px solid #e5e7eb; background: #f9fafb; color: #6b7280;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .filter-tab.active { background: #FF6B35; border-color: #FF6B35; color: white; }
+    .status-assigned { background: #EDE9FE; color: #7C3AED; }
+    .status-out      { background: #FEF3C7; color: #D97706; }
+
+    /* Bottom sheet modal */
+    #return-modal { display: none; }
+    #return-modal.open { display: flex; }
+    .modal-sheet { transform: translateY(100%); transition: transform 0.3s ease; }
+    #return-modal.open .modal-sheet { transform: translateY(0); }
+  </style>
 </head>
-<body class="bg-gray-50 font-sans pb-20">
+<body class="bg-gray-50 font-sans pb-24">
+
   <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
     <div class="flex items-center gap-2 max-w-lg mx-auto">
       <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
-      <h1 class="text-lg font-bold text-gray-800">คืนของ</h1>
+      <h1 class="text-lg font-bold text-gray-800 flex-1">คืนของ</h1>
+      <span id="item-count" class="text-xs bg-orange-50 text-primary font-bold px-2.5 py-1 rounded-full"></span>
     </div>
   </header>
 
   <main class="px-4 py-4 max-w-lg mx-auto">
-    <!-- Select rental item -->
-    <div class="bg-white rounded-2xl p-4 mb-4">
-      <label class="text-sm font-bold text-gray-600 mb-2 block">เลือกรายการที่ต้องการคืน (เช่า/ทรัพย์สิน)</label>
-      <select id="rental-select" class="form-input">
-        <option value="">-- เลือกรายการ --</option>
-      </select>
-    </div>
 
-    <!-- Item Info -->
-    <div id="rental-info" class="bg-white rounded-2xl p-4 mb-4" style="display:none">
-      <h3 class="font-bold text-gray-800 mb-2" id="ri-name"></h3>
-      <div class="space-y-2 text-sm">
-        <div class="flex justify-between"><span class="text-gray-500">รหัส</span><span class="font-medium" id="ri-code"></span></div>
-        <div class="flex justify-between"><span class="text-gray-500">จำนวนทั้งหมด</span><span class="font-medium" id="ri-qty"></span></div>
-        <div class="flex justify-between"><span class="text-gray-500">ค่าเช่า/วัน</span><span class="font-medium" id="ri-rate"></span></div>
-        <div class="flex justify-between"><span class="text-gray-500">วันเช่า</span><span class="font-medium" id="ri-rent-date"></span></div>
-        <div class="flex justify-between"><span class="text-gray-500">ครบกำหนด</span><span class="font-medium" id="ri-due-date"></span></div>
+    <!-- Search & Filter -->
+    <div class="bg-white rounded-2xl p-3 mb-4 shadow-sm space-y-2">
+      <div class="search-box">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="search-input" placeholder="ค้นหาชื่อ, รหัส, หรือชื่อช่าง..." autocomplete="off">
+      </div>
+      <div class="flex gap-2 overflow-x-auto pb-0.5" id="filter-tabs">
+        <button onclick="setFilter('all')"      class="filter-tab active" data-filter="all">ทั้งหมด</button>
+        <button onclick="setFilter('asset')"    class="filter-tab" data-filter="asset">🛡 ทรัพย์สิน</button>
+        <button onclick="setFilter('rental')"   class="filter-tab" data-filter="rental">⏱ ของเช่า</button>
       </div>
     </div>
 
-    <!-- Return Form -->
-    <form id="return-form" class="bg-white rounded-2xl p-4" style="display:none">
-      <div class="form-group">
-        <label>จำนวนที่คืน <span class="text-red-500">*</span></label>
-        <input type="number" id="ret_qty" class="form-input" min="1" required>
+    <!-- Loading skeleton -->
+    <div id="skeleton" class="space-y-3">
+      <div class="bg-white rounded-2xl p-4 animate-pulse"><div class="h-4 bg-gray-200 rounded w-1/3 mb-3"></div><div class="h-14 bg-gray-100 rounded-xl"></div></div>
+      <div class="bg-white rounded-2xl p-4 animate-pulse"><div class="h-4 bg-gray-200 rounded w-1/4 mb-3"></div><div class="h-14 bg-gray-100 rounded-xl"></div></div>
+      <div class="bg-white rounded-2xl p-4 animate-pulse"><div class="h-4 bg-gray-200 rounded w-2/5 mb-3"></div><div class="h-14 bg-gray-100 rounded-xl"></div></div>
+    </div>
+
+    <!-- Cards list -->
+    <div id="items-container" class="space-y-3" style="display:none"></div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="text-center py-16" style="display:none">
+      <div class="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="package-check" class="w-9 h-9 text-green-500"></i>
       </div>
-      <div class="form-group">
-        <label>วันที่คืน <span class="text-red-500">*</span></label>
-        <input type="date" id="ret_date" class="form-input" required>
+      <p class="text-gray-600 font-bold">ไม่พบรายการที่เบิกออกไป</p>
+      <p class="text-gray-400 text-sm mt-1">ของทุกอย่างอยู่ในสโตร์ครบแล้ว 👍</p>
+    </div>
+
+  </main>
+
+  <!-- ────────── Bottom-sheet Modal ────────── -->
+  <div id="return-modal" class="fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
+    <div class="modal-sheet bg-white rounded-t-3xl w-full max-w-lg px-5 pt-4 pb-10">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
+
+      <div class="flex items-start gap-3 mb-4">
+        <div id="modal-icon" class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-gray-100"></div>
+        <div>
+          <h3 class="font-bold text-gray-800 text-base leading-tight" id="modal-item-name"></h3>
+          <p class="text-xs text-gray-400 mt-0.5" id="modal-item-meta"></p>
+        </div>
       </div>
+
+      <!-- Rental-only fields -->
+      <div id="modal-rental-only">
+        <div class="form-group">
+          <label>จำนวนที่คืน <span class="text-red-500">*</span></label>
+          <input type="number" id="ret_qty" class="form-input" min="1" required placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>วันที่คืน</label>
+          <input type="date" id="ret_date" class="form-input">
+        </div>
+      </div>
+
       <div class="form-group">
-        <label>สภาพ</label>
+        <label>สภาพ (Condition)</label>
         <select id="ret_condition" class="form-input">
-          <option value="good">ดี</option>
-          <option value="damaged">ชำรุด</option>
-          <option value="lost">สูญหาย</option>
+          <option value="good">✅ ดี / Good</option>
+          <option value="damaged">⚠️ ชำรุด / Damaged</option>
+          <option value="lost">❌ สูญหาย / Lost</option>
         </select>
       </div>
       <div class="form-group">
         <label>หมายเหตุ</label>
-        <textarea id="ret_notes" class="form-input" rows="2"></textarea>
+        <textarea id="ret_notes" class="form-input" rows="2" placeholder="ถ้ามี..."></textarea>
       </div>
 
-      <!-- ค่าเช่ารวม (auto-calculate) -->
-      <div class="bg-amber-50 rounded-xl p-4 mb-4" id="cost-summary" style="display:none">
-        <h4 class="text-sm font-bold text-amber-700 mb-2">สรุปค่าเช่า</h4>
-        <div class="space-y-1 text-sm text-amber-800">
-          <div class="flex justify-between"><span>จำนวนวัน</span><span id="cs-days"></span></div>
-          <div class="flex justify-between"><span>ค่าเช่า/วัน × จำนวน</span><span id="cs-calc"></span></div>
-          <hr class="border-amber-200 my-1">
-          <div class="flex justify-between font-bold text-base"><span>รวม</span><span id="cs-total"></span></div>
-        </div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="closeModal()" class="btn btn-ghost flex-1">ยกเลิก</button>
+        <button onclick="submitReturn()" class="btn btn-success flex-1 justify-center" id="btn-confirm-return">
+          <i data-lucide="package-plus"></i> ยืนยันคืนของ
+        </button>
       </div>
-
-      <button type="submit" class="btn btn-success w-full justify-center" id="btn-return">
-        <i data-lucide="package-plus"></i> ยืนยันคืนของ
-      </button>
-    </form>
-  </main>
+    </div>
+  </div>
 
   <div id="bottom-nav"></div>
 
@@ -90,111 +133,175 @@
   <script>
     if (!Auth.requireAuth(['Admin', 'Store'])) throw new Error('Unauthorized');
 
-    let selectedRental = null;
+    let allItems = [];
+    let selectedItem = null;
+    let currentFilter = 'all';
 
-    // Set default return date = today
     document.getElementById('ret_date').value = dayjs().format('YYYY-MM-DD');
 
-    // Load items that can be returned (rental, asset)
+    // ── Load checked-out items ──
     (async () => {
       const res = await API.listItems();
-      if (res.ok && res.data) {
-        const sel = document.getElementById('rental-select');
-        // ทรัพย์สินที่ถูกเบิก (assigned) และของเช่าที่อยู่ข้างนอก (out)
-        const outItems = res.data.filter(i => 
-          (i.category === 'asset' && i.status === 'assigned') ||
-          (i.category === 'rental' && (i.status === 'out' || i.status === 'in_stock'))
-        );
-        outItems.forEach(item => {
-          const opt = document.createElement('option');
-          opt.value = item.item_code;
-          opt.textContent = `${item.item_code} — ${item.name} (${CONFIG.STATUS_LABELS[item.status] || item.status})`;
-          sel.appendChild(opt);
-        });
+      document.getElementById('skeleton').style.display = 'none';
 
-        // Pre-select from URL
-        const preCode = App.getParam('code');
-        if (preCode) { sel.value = preCode; sel.dispatchEvent(new Event('change')); }
+      if (!res.ok || !res.data) { UI.showToast('โหลดข้อมูลไม่สำเร็จ', 'error'); return; }
+
+      allItems = res.data.filter(i =>
+        (i.category === 'asset'  && i.status === 'assigned') ||
+        (i.category === 'rental' && (i.status === 'out' || i.status === 'in_stock'))
+      );
+
+      // Pre-select from URL
+      const preCode = App.getParam('code');
+      if (preCode) {
+        const pre = allItems.find(i => String(i.item_code) === String(preCode));
+        if (pre) setTimeout(() => openModal(pre), 400);
       }
+
+      renderItems();
     })();
 
-    // On select rental item
-    document.getElementById('rental-select').addEventListener('change', async (e) => {
-      const code = e.target.value;
-      if (!code) { document.getElementById('rental-info').style.display = 'none'; document.getElementById('return-form').style.display = 'none'; return; }
-
-      const res = await API.getItem(code);
-      if (!res.ok) { UI.showToast('ไม่พบข้อมูล', 'error'); return; }
-
-      selectedRental = res.data;
-      document.getElementById('ri-name').textContent = selectedRental.name;
-      document.getElementById('ri-code').textContent = selectedRental.item_code;
-      document.getElementById('ri-qty').textContent = (selectedRental.qty || 0) + ' ' + (selectedRental.unit || '');
-      document.getElementById('ri-rate').textContent = UI.formatCurrency(selectedRental.rate_per_day);
-      document.getElementById('ri-rent-date').textContent = UI.formatDate(selectedRental.rent_date);
-      document.getElementById('ri-due-date').textContent = UI.formatDate(selectedRental.due_date);
-
-      document.getElementById('rental-info').style.display = 'block';
-      document.getElementById('return-form').style.display = 'block';
-      
-      if (selectedRental.category === 'asset') {
-        document.getElementById('ret_qty').closest('.form-group').style.display = 'none';
-        document.getElementById('ret_qty').value = 1;
-        document.getElementById('ret_date').closest('.form-group').style.display = 'none';
-      } else {
-        document.getElementById('ret_qty').closest('.form-group').style.display = 'block';
-        document.getElementById('ret_qty').value = '';
-        document.getElementById('ret_qty').max = selectedRental.qty || 9999;
-        document.getElementById('ret_date').closest('.form-group').style.display = 'block';
-      }
-      
-      calculateCost();
+    // ── Search ──
+    let searchTimer;
+    document.getElementById('search-input').addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => renderItems(e.target.value.trim()), 250);
     });
 
-    // คำนวณค่าเช่ารวม
-    function calculateCost() {
-      if (!selectedRental || !selectedRental.rate_per_day) { document.getElementById('cost-summary').style.display = 'none'; return; }
-      const retDate = document.getElementById('ret_date').value;
-      const retQty = parseInt(document.getElementById('ret_qty').value) || 0;
-      if (!retDate || !selectedRental.rent_date) return;
-
-      const days = dayjs(retDate).diff(dayjs(selectedRental.rent_date), 'day');
-      const rate = selectedRental.rate_per_day || 0;
-      const total = days * rate * retQty;
-
-      document.getElementById('cs-days').textContent = days + ' วัน';
-      document.getElementById('cs-calc').textContent = `${UI.formatCurrency(rate)} × ${retQty}`;
-      document.getElementById('cs-total').textContent = UI.formatCurrency(total);
-      document.getElementById('cost-summary').style.display = 'block';
+    // ── Filter tabs ──
+    function setFilter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-tab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+      renderItems(document.getElementById('search-input').value.trim());
     }
 
-    document.getElementById('ret_date').addEventListener('change', calculateCost);
-    document.getElementById('ret_qty').addEventListener('input', calculateCost);
+    // ── Render ──
+    function renderItems(q = '') {
+      const container  = document.getElementById('items-container');
+      const emptyState = document.getElementById('empty-state');
+      const countEl    = document.getElementById('item-count');
 
-    // Submit return
-    document.getElementById('return-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!selectedRental) return;
+      let list = allItems;
+      if (currentFilter !== 'all') list = list.filter(i => i.category === currentFilter);
+      if (q) {
+        const ql = q.toLowerCase();
+        list = list.filter(i =>
+          String(i.item_code).toLowerCase().includes(ql) ||
+          (i.name  || '').toLowerCase().includes(ql)
+        );
+      }
 
-      const btn = document.getElementById('btn-return');
+      countEl.textContent = list.length + ' รายการ';
+
+      if (list.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+      container.style.display  = 'block';
+
+      const catColors = CONFIG.CATEGORY_COLORS || { asset:'#8B5CF6', rental:'#F59E0B' };
+      const catLabels = { asset:'ทรัพย์สิน', rental:'ของเช่า', consumable:'สิ้นเปลือง', gas:'ลม/แก๊ส' };
+      const statusCls  = { assigned:'status-assigned', out:'status-out', in_stock:'status-out' };
+      const statusLbl  = { assigned:'ถูกเบิกออกไป', out:'นอกสโตร์', in_stock:'ในสต็อก' };
+
+      container.innerHTML = list.map(item => {
+        const color = catColors[item.category] || '#6B7280';
+        const icon  = (CONFIG.CATEGORY_ICONS && CONFIG.CATEGORY_ICONS[item.category]) || 'package';
+        return `
+        <div class="item-card bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:shadow-md cursor-pointer"
+             onclick='openModal(${JSON.stringify(item).replace(/'/g,"&#39;")})'>
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:${color}18;color:${color}">
+              <i data-lucide="${icon}" class="w-5 h-5"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-2">
+                <p class="font-bold text-gray-800 text-sm leading-snug truncate">${item.name}</p>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${statusCls[item.status] || 'status-out'}">
+                  ${statusLbl[item.status] || item.status}
+                </span>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:${color}18;color:${color}">${catLabels[item.category] || item.category}</span>
+                <span class="text-xs text-gray-400">${item.item_code}</span>
+                ${item.category !== 'asset' ? `<span class="text-xs text-gray-400 ml-auto">คงเหลือ <b>${item.qty ?? 0}</b> ${item.unit || ''}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-end mt-2.5 pt-2.5 border-t border-gray-50">
+            <span class="text-xs font-bold text-primary flex items-center gap-1">
+              แตะเพื่อดำเนินการคืน <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+        </div>`;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // ── Modal ──
+    function openModal(item) {
+      selectedItem = item;
+      const color = (CONFIG.CATEGORY_COLORS && CONFIG.CATEGORY_COLORS[item.category]) || '#8B5CF6';
+      const icon  = (CONFIG.CATEGORY_ICONS  && CONFIG.CATEGORY_ICONS[item.category])  || 'package';
+
+      document.getElementById('modal-item-name').textContent = item.name;
+      document.getElementById('modal-item-meta').textContent = item.item_code + (item.category === 'asset' ? ' · ทรัพย์สิน' : ' · ของเช่า');
+      document.getElementById('modal-icon').innerHTML = `<i data-lucide="${icon}" class="w-6 h-6"></i>`;
+      document.getElementById('modal-icon').style.cssText = `background:${color}18;color:${color}`;
+      document.getElementById('ret_notes').value     = '';
+      document.getElementById('ret_condition').value = 'good';
+
+      const rentalOnly = document.getElementById('modal-rental-only');
+      if (item.category === 'asset') {
+        rentalOnly.style.display = 'none';
+      } else {
+        rentalOnly.style.display = 'block';
+        document.getElementById('ret_qty').value = item.qty || 1;
+        document.getElementById('ret_qty').max   = item.qty || 9999;
+        document.getElementById('ret_date').value = dayjs().format('YYYY-MM-DD');
+      }
+
+      document.getElementById('return-modal').classList.add('open');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('return-modal').classList.remove('open');
+      selectedItem = null;
+    }
+
+    // Backdrop click close
+    document.getElementById('return-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    async function submitReturn() {
+      if (!selectedItem) return;
+      const btn = document.getElementById('btn-confirm-return');
       UI.setBtnLoading(btn, true);
 
       const res = await API.returnRental(
-        selectedRental.item_code,
-        parseInt(document.getElementById('ret_qty').value),
+        selectedItem.item_code,
+        selectedItem.category === 'asset' ? 1 : parseInt(document.getElementById('ret_qty').value),
         document.getElementById('ret_date').value,
         document.getElementById('ret_condition').value,
         document.getElementById('ret_notes').value
       );
 
       UI.setBtnLoading(btn, false);
+
       if (res.ok) {
-        UI.showToast('คืนของสำเร็จ', 'success');
-        setTimeout(() => window.location.href = 'items.html', 1000);
+        UI.showToast(`✅ คืน "${selectedItem.name}" สำเร็จ`, 'success');
+        allItems = allItems.filter(i => String(i.item_code) !== String(selectedItem.item_code));
+        closeModal();
+        renderItems(document.getElementById('search-input').value.trim());
       } else {
-        UI.showToast(res.error || 'ไม่สำเร็จ', 'error');
+        UI.showToast(res.error || 'ทำรายการไม่สำเร็จ', 'error');
       }
-    });
+    }
 
     UI.initPage('home');
   </script>
