@@ -124,12 +124,13 @@
     // Load data
     App.loadDashboard();
 
-    // Load recent transactions
+    // Load recent transactions (แสดงแค่ 5 รายการล่าสุด)
     (async () => {
       const txRes = await API.listTransactions({ limit: 5 });
       const container = document.getElementById('recent-tx');
-      if (txRes.ok && txRes.data && txRes.data.length > 0) {
-        container.innerHTML = txRes.data.map(tx => `
+      const items = (txRes.ok && txRes.data) ? txRes.data.slice(0, 5) : [];
+      if (items.length > 0) {
+        container.innerHTML = items.map(tx => `
           <div class="bg-white rounded-xl p-3 flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               ${UI.renderActionBadge(tx.action)}

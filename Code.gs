@@ -447,7 +447,10 @@ function recordTransaction(tx) {
 function listTransactions(filters) {
   let data = getSheetData(TABS.TRANSACTIONS);
   if (filters.action) data = data.filter(d => d.action === filters.action);
-  return data.sort((a,b) => new Date(b.datetime) - new Date(a.datetime)).slice(0, 50);
+  if (filters.item_code) data = data.filter(d => String(d.item_code) === String(filters.item_code));
+  const sorted = data.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  const limit = filters.limit ? Number(filters.limit) : 50;
+  return sorted.slice(0, limit);
 }
 
 function getWorkerHoldings() {
