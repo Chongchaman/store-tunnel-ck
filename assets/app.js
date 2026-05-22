@@ -57,20 +57,23 @@ const App = {
       return;
     }
 
-    let html = '<h2 class="section-title" style="color:#EF4444"><i data-lucide="alert-triangle" style="width:18px;height:18px"></i> แจ้งเตือน</h2>';
+    const dangerCount  = alerts.filter(a => a.type === 'danger').length;
+    const warningCount = alerts.filter(a => a.type !== 'danger').length;
 
-    alerts.forEach(item => {
-      let icon = 'alert-triangle';
-      let alertClass = item.type === 'danger' ? 'alert-danger' : 'alert-warning';
-      if (item.message.includes('เลยกำหนดคืน')) icon = 'clock';
-      
-      html += `<div class="alert-card ${alertClass}">
-        <i data-lucide="${icon}"></i>
-        <div><strong>${item.message}</strong></div>
-      </div>`;
-    });
-
-    container.innerHTML = html;
+    // แสดงแค่ banner สรุป + ปุ่มไปหน้า alerts.html
+    container.innerHTML = `
+      <a href="alerts.html" class="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 hover:bg-red-100 transition-colors active:scale-95 transform duration-150">
+        <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="bell-ring" class="w-5 h-5 text-red-500"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-red-700">มีการแจ้งเตือน ${alerts.length} รายการ</p>
+          <p class="text-xs text-red-400 mt-0.5">
+            ${dangerCount > 0  ? `🔴 วิกฤต ${dangerCount} ` : ''}${warningCount > 0 ? `🟡 เฝ้าระวัง ${warningCount}` : ''}
+          </p>
+        </div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-red-400 flex-shrink-0"></i>
+      </a>`;
     lucide.createIcons();
   },
 

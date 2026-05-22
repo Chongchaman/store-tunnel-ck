@@ -50,7 +50,7 @@
       </div>
     </section>
 
-    <!-- Alerts -->
+    <!-- Alert Banner (compact) -->
     <section class="mb-5" id="alert-section"></section>
 
     <!-- Quick Actions -->
@@ -96,14 +96,15 @@
 
     // Quick Actions — แสดงตาม role
     const actions = [
-      { icon:'plus-circle', label:'เพิ่มของ', href:'add-item.html', color:'#FF6B35', roles:['Admin','Store'] },
-      { icon:'package-minus', label:'เบิกของ', href:'withdraw.html', color:'#3B82F6', roles:['Admin','Store'] },
-      { icon:'scan-line', label:'สแกน', href:'scan.html', color:'#8B5CF6', roles:['Admin','Store','Worker'] },
-      { icon:'file-bar-chart', label:'รายงาน', href:'reports.html', color:'#10B981', roles:['Admin','Store'] },
-      { icon:'package-plus', label:'คืนของ', href:'return.html', color:'#F59E0B', roles:['Admin','Store'] },
-      { icon:'users', label:'จัดการผู้ใช้', href:'users.html', color:'#EC4899', roles:['Admin'] },
-      { icon:'package', label:'รายการ', href:'items.html', color:'#6366F1', roles:['Admin','Store','Worker'] },
-      { icon:'settings', label:'ตั้งค่า', href:'settings.html', color:'#6B7280', roles:['Admin'] },
+      { icon:'plus-circle',   label:'เพิ่มของ',    href:'add-item.html',  color:'#FF6B35', roles:['Admin','Store'] },
+      { icon:'package-minus', label:'เบิกของ',    href:'withdraw.html',  color:'#3B82F6', roles:['Admin','Store'] },
+      { icon:'scan-line',     label:'สแกน',       href:'scan.html',      color:'#8B5CF6', roles:['Admin','Store','Worker'] },
+      { icon:'file-bar-chart',label:'รายงาน',     href:'reports.html',   color:'#10B981', roles:['Admin','Store'] },
+      { icon:'package-plus',  label:'คืนของ',    href:'return.html',    color:'#F59E0B', roles:['Admin','Store'] },
+      { icon:'bell',          label:'แจ้งเตือน',   href:'alerts.html',    color:'#EF4444', roles:['Admin','Store'] },
+      { icon:'users',         label:'จัดการผู้ใช้', href:'users.html',     color:'#EC4899', roles:['Admin'] },
+      { icon:'package',       label:'รายการ',     href:'items.html',     color:'#6366F1', roles:['Admin','Store','Worker'] },
+      { icon:'settings',      label:'ตั้งค่า',     href:'settings.html',  color:'#6B7280', roles:['Admin'] },
     ];
 
     const actionsGrid = document.getElementById('actions-grid');
