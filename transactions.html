@@ -112,8 +112,9 @@
           <div class="flex items-start gap-2.5 flex-1 min-w-0">
             ${UI.renderActionBadge(tx.action)}
             <div class="min-w-0 flex-1">
-              <p class="text-sm font-semibold text-gray-800 truncate">${tx.item_code}</p>
+              <p class="text-sm font-semibold text-gray-800 truncate">${tx.item_name || tx.item_code}</p>
               <p class="text-xs text-gray-400 truncate">
+                ${tx.item_name ? '<span class="text-gray-300">' + tx.item_code + '</span> · ' : ''}
                 ${tx.by_user || ''}${tx.for_whom ? ' → ' + tx.for_whom : ''}
                 ${tx.job_ref ? ' | ' + tx.job_ref : ''}
               </p>
@@ -137,11 +138,11 @@
       if (txData.length === 0) { UI.showToast('ไม่มีข้อมูลให้ Export', 'warning'); return; }
 
       const ws_data = [
-        ['รหัส TX', 'วันเวลา', 'รหัสของ', 'ประเภท', 'Action', 'ก่อน', 'เปลี่ยน', 'หลัง', 'โดย', 'ให้ใคร', 'งาน', 'หมายเหตุ']
+        ['รหัส TX', 'วันเวลา', 'รหัสของ', 'ชื่อของ', 'ประเภท', 'Action', 'ก่อน', 'เปลี่ยน', 'หลัง', 'โดย', 'ให้ใคร', 'งาน', 'หมายเหตุ']
       ];
       txData.forEach(tx => {
         ws_data.push([
-          tx.tx_id, tx.datetime, tx.item_code, tx.item_category,
+          tx.tx_id, tx.datetime, tx.item_code, tx.item_name || '', tx.item_category,
           CONFIG.ACTION_LABELS[tx.action] || tx.action,
           tx.qty_before, tx.qty_change, tx.qty_after,
           tx.by_user, tx.for_whom, tx.job_ref, tx.notes
