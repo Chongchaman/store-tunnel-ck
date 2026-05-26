@@ -446,11 +446,17 @@ function recordTransaction(tx) {
 
 function listTransactions(filters) {
   let data = getSheetData(TABS.TRANSACTIONS);
-  if (filters.action) data = data.filter(d => d.action === filters.action);
+  if (filters.action)    data = data.filter(d => d.action === filters.action);
   if (filters.item_code) data = data.filter(d => String(d.item_code) === String(filters.item_code));
   const sorted = data.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   const limit = filters.limit ? Number(filters.limit) : 50;
-  return sorted.slice(0, limit);
+  const sliced = sorted.slice(0, limit);
+
+  // Join item_name from Items sheet
+  const items = getSheetData(TABS.ITEMS);
+  const itemMap = {};
+  items.forEach(i => { itemMap[String(i.item_code)] = i.name || ''; });
+  return sliced.map(tx => ({ ...tx, item_name: itemMap[String(tx.item_code)] || '' }));
 }
 
 function getWorkerHoldings() {

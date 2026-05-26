@@ -134,12 +134,12 @@
           <div class="bg-white rounded-xl p-3 flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               ${UI.renderActionBadge(tx.action)}
-              <div>
-                <p class="text-sm font-medium text-gray-700">${tx.item_code}</p>
-                <p class="text-xs text-gray-400">${tx.by_user}${tx.for_whom ? ' → '+tx.for_whom : ''}</p>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-800 leading-tight truncate">${tx.item_name || tx.item_code}</p>
+                <p class="text-xs text-gray-400 truncate">${tx.item_name ? tx.item_code + ' · ' : ''}${tx.by_user}${tx.for_whom ? ' → '+tx.for_whom : ''}</p>
               </div>
             </div>
-            <div class="text-right">
+            <div class="text-right flex-shrink-0 ml-2">
               <p class="text-sm font-semibold ${tx.qty_change < 0 ? 'text-red-500' : 'text-green-600'}">${tx.qty_change > 0 ? '+':''}${tx.qty_change || ''}</p>
               <p class="text-xs text-gray-400">${UI.formatDateTime(tx.datetime)}</p>
             </div>
