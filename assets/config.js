@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // ── Google Apps Script URL (เปลี่ยนหลัง Deploy) ──
-  API_URL: 'https://script.google.com/macros/s/AKfycbzMyU20yu_2wxXbvgeYlpysFlexeeq43_qreAXIUnH3bLCA424WMCg36j_X6hb-RSzj/exec',
+  API_URL: 'https://store-tunnel-ck-api-532449752170.asia-southeast1.run.app/api',
 
   // ── ข้อมูลไซต์ ──
   APP_NAME: 'STORE TUNNEL CK',
