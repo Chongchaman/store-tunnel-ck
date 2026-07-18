@@ -17,7 +17,7 @@
 <body class="bg-gray-50 font-sans pb-24">
 
   <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
-    <div class="flex items-center gap-2 max-w-lg mx-auto">
+    <div class="flex items-center gap-2 max-w-lg mx-auto md:max-w-5xl">
       <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
       <h1 class="text-lg font-bold text-gray-800 flex-1">การแจ้งเตือน</h1>
       <span id="alert-count" class="text-xs bg-red-100 text-red-600 font-bold px-2.5 py-1 rounded-full"></span>
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Alert list -->
-    <div id="alert-list" class="space-y-3" style="display:none"></div>
+    <div id="alert-list" class="grid grid-cols-1 md:grid-cols-2 gap-3" style="display:none"></div>
 
     <!-- Empty -->
     <div id="empty-state" class="text-center py-16" style="display:none">

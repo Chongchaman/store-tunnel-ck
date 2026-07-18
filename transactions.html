@@ -16,7 +16,7 @@
 </head>
 <body class="bg-gray-50 font-sans pb-20">
   <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3">
-    <div class="flex items-center justify-between max-w-lg mx-auto">
+    <div class="flex items-center justify-between max-w-lg mx-auto md:max-w-5xl">
       <div class="flex items-center gap-2">
         <button onclick="history.back()" class="btn-icon"><i data-lucide="arrow-left"></i></button>
         <h1 class="text-lg font-bold text-gray-800">ประวัติการเคลื่อนไหว</h1>
@@ -107,8 +107,9 @@
         return;
       }
 
-      container.innerHTML = txData.map(tx => `
-        <div class="bg-white rounded-xl p-3 mb-2 flex items-start justify-between">
+      // Render responsive views: List on mobile (hidden on md), Table on desktop (hidden on mobile)
+      const mobileHtml = txData.map(tx => `
+        <div class="bg-white rounded-xl p-3 mb-2 flex items-start justify-between md:hidden">
           <div class="flex items-start gap-2.5 flex-1 min-w-0">
             ${UI.renderActionBadge(tx.action)}
             <div class="min-w-0 flex-1">
@@ -130,6 +131,49 @@
         </div>
       `).join('');
 
+      const desktopTableHtml = `
+      <div class="hidden md:block overflow-x-auto bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase">
+              <th class="px-6 py-4">วันเวลา</th>
+              <th class="px-6 py-4">ประเภท</th>
+              <th class="px-6 py-4">รหัสของ</th>
+              <th class="px-6 py-4">ชื่อของ</th>
+              <th class="px-6 py-4">จำนวน</th>
+              <th class="px-6 py-4">ผู้บันทึก</th>
+              <th class="px-6 py-4">ช่างที่เกี่ยวข้อง</th>
+              <th class="px-6 py-4">งาน / หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+            ${txData.map(tx => {
+              const actionLabel = CONFIG.ACTION_LABELS[tx.action] || tx.action;
+              const actionColor = CONFIG.ACTION_COLORS[tx.action] || '#6B7280';
+              const qtyClass = (tx.qty_change || 0) < 0 ? 'text-red-500 font-semibold' : 'text-green-600 font-semibold';
+              const qtyText = tx.qty_change ? ((tx.qty_change > 0 ? '+' : '') + tx.qty_change) : '-';
+
+              return `
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4 text-xs text-gray-500">${UI.formatDateTime(tx.datetime)}</td>
+                <td class="px-6 py-4">
+                  <span class="badge" style="background:${actionColor}15;color:${actionColor};border:1px solid ${actionColor}30">${actionLabel}</span>
+                </td>
+                <td class="px-6 py-4 font-mono text-xs text-gray-500">${tx.item_code}</td>
+                <td class="px-6 py-4 font-semibold text-gray-800">${tx.item_name || '-'}</td>
+                <td class="px-6 py-4 ${qtyClass}">${qtyText}</td>
+                <td class="px-6 py-4">${tx.by_user || '-'}</td>
+                <td class="px-6 py-4">${tx.for_whom || '-'}</td>
+                <td class="px-6 py-4">
+                  <span class="text-xs text-gray-500">${tx.job_ref ? 'งาน: ' + tx.job_ref : ''} ${tx.notes ? ' | ' + tx.notes : ''}</span>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+      container.innerHTML = mobileHtml + desktopTableHtml;
       lucide.createIcons();
     }
 

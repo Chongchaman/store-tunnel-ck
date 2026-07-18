@@ -146,8 +146,79 @@ textarea.form-input { min-height:80px; resize:vertical; }
 /* ── Filter bar ── */
 .filter-bar { display:flex; align-items:center; gap:8px; padding:12px 16px; overflow-x:auto; }
 
-/* ── Responsive ── */
-@media (min-width:640px) {
-  main { max-width:480px; margin:0 auto; }
-  .bottom-nav { max-width:480px; left:50%; transform:translateX(-50%); border-radius:16px 16px 0 0; }
+/* ── Responsive & Desktop Sidebar ── */
+@media (min-width: 768px) {
+  /* ขยาย container หลักให้กว้างขึ้นบน Desktop */
+  main {
+    max-width: 1000px !important;
+    margin-left: 260px !important; /* เว้นระยะให้ Sidebar ด้านซ้าย */
+    margin-right: auto !important;
+    padding-bottom: 24px !important;
+  }
+  
+  header {
+    margin-left: 260px !important;
+  }
+
+  /* ซ่อน Bottom Nav เมื่ออยู่บน Desktop */
+  .bottom-nav {
+    display: none !important;
+  }
+
+  /* สไตล์สำหรับ Sidebar ด้านซ้าย */
+  .desktop-sidebar {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    background: #ffffff;
+    border-right: 1px solid #E5E7EB;
+    padding: 24px 16px;
+    z-index: 100;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #4B5563;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 12px;
+    transition: all 0.2s;
+    margin-bottom: 6px;
+  }
+
+  .sidebar-link:hover {
+    background: #F3F4F6;
+    color: #1F2937;
+  }
+
+  .sidebar-link.active {
+    background: #FFF3ED;
+    color: #FF6B35;
+  }
+  
+  .sidebar-link svg {
+    width: 20px;
+    height: 20px;
+  }
 }
+
+@media (max-width: 767px) {
+  .desktop-sidebar {
+    display: none !important;
+  }
+  
+  /* ให้ main ชิดขอบและกว้างปกติบนมือถือ */
+  main {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+

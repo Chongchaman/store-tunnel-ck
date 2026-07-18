@@ -97,7 +97,8 @@ const App = {
       return;
     }
 
-    container.innerHTML = res.data.map(item => UI.renderItemCard(item)).join('');
+    // รวมการแสดงผลทั้งแบบการ์ด (จอมือถือ) และแบบตาราง (จอคอม)
+    container.innerHTML = res.data.map(item => UI.renderItemCard(item)).join('') + UI.renderItemsTable(res.data);
     lucide.createIcons();
   },
 

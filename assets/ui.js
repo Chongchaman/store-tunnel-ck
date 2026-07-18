@@ -133,7 +133,7 @@ const UI = {
     const qtyText = item.qty !== undefined ? `จำนวน: ${item.qty} ${item.unit || ''}` : '';
 
     return `
-    <a href="item-detail.html?code=${encodeURIComponent(item.item_code)}" class="item-card">
+    <a href="item-detail.html?code=${encodeURIComponent(item.item_code)}" class="item-card md:hidden">
       <div class="item-card-img">
         ${item.photo_url ? `<img src="${item.photo_url}" alt="${item.name}" loading="lazy">` : `<i data-lucide="${CONFIG.CATEGORY_ICONS[item.category] || 'package'}"></i>`}
       </div>
@@ -149,6 +149,49 @@ const UI = {
         </div>
       </div>
     </a>`;
+  },
+
+  // ════════════════════════════════════════
+  // Item Table Row (ใช้ในจอใหญ่)
+  // ════════════════════════════════════════
+  renderItemsTable(itemsList) {
+    return `
+    <div class="hidden md:block overflow-x-auto bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase">
+            <th class="px-6 py-4">รหัส</th>
+            <th class="px-6 py-4">ชื่อ</th>
+            <th class="px-6 py-4">หมวดหมู่</th>
+            <th class="px-6 py-4">จำนวนคงเหลือ</th>
+            <th class="px-6 py-4">สถานะ</th>
+            <th class="px-6 py-4 text-right">การจัดการ</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+          ${itemsList.map(item => {
+            const catLabel = CONFIG.CATEGORY_LABELS[item.category] || item.category;
+            const catColor = CONFIG.CATEGORY_COLORS[item.category] || '#6B7280';
+            const statusHtml = item.status ? UI.renderBadge(item.status) : '-';
+            const qtyText = item.qty !== undefined ? `${item.qty} ${item.unit || ''}` : '-';
+
+            return `
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4 font-mono text-xs text-gray-500">${item.item_code}</td>
+              <td class="px-6 py-4 font-semibold text-gray-800">${item.name}</td>
+              <td class="px-6 py-4">
+                <span class="cat-badge" style="background:${catColor}15;color:${catColor}">${catLabel}</span>
+              </td>
+              <td class="px-6 py-4 font-medium">${qtyText}</td>
+              <td class="px-6 py-4">${statusHtml}</td>
+              <td class="px-6 py-4 text-right">
+                <a href="item-detail.html?code=${encodeURIComponent(item.item_code)}" class="text-primary hover:text-primary-dark font-bold">ดูรายละเอียด →</a>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
   },
 
   // ════════════════════════════════════════
@@ -201,14 +244,68 @@ const UI = {
   },
 
   // ════════════════════════════════════════
+  // Desktop Sidebar
+  // ════════════════════════════════════════
+  renderDesktopSidebar(activePage = '') {
+    const items = CONFIG.NAV_ITEMS;
+    const user = Auth.getUser();
+    
+    let html = `
+    <aside class="desktop-sidebar">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;padding-left:8px">
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#FF6B35,#E55A2B);display:flex;align-items:center;justify-content:center">
+          <i data-lucide="hard-hat" style="width:20px;height:20px;color:#fff"></i>
+        </div>
+        <div>
+          <h2 style="font-size:14px;font-weight:700;color:#1F2937;line-height:1.2">STORE TUNNEL CK</h2>
+          <span style="font-size:11px;color:#9CA3AF">${user ? user.role : ''}</span>
+        </div>
+      </div>
+      <div style="flex:1">`;
+
+    items.forEach(item => {
+      const isActive = activePage === item.id;
+      html += `
+        <a href="${item.href}" class="sidebar-link ${isActive ? 'active' : ''}" title="${item.label}">
+          <i data-lucide="${item.icon}"></i>
+          <span>${item.label}</span>
+        </a>`;
+    });
+
+    html += `
+      </div>
+      <div style="border-top:1px solid #F3F4F6;padding-top:16px;margin-top:auto">
+        <div style="display:flex;align-items:center;justify-content:between;gap:10px;padding:0 8px">
+          <div style="min-width:0;flex:1">
+            <p style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user ? user.full_name : ''}</p>
+            <p style="font-size:10px;color:#9CA3AF">${user ? '@'+user.username : ''}</p>
+          </div>
+          <button onclick="Auth.logout()" class="btn-icon" title="ออกจากระบบ" style="width:32px;height:32px"><i data-lucide="log-out" style="width:16px;height:16px"></i></button>
+        </div>
+      </div>
+    </aside>`;
+    return html;
+  },
+
+  // ════════════════════════════════════════
   // Init Page — เรียกทุกหน้า
   // ════════════════════════════════════════
   initPage(activePage) {
-    // ใส่ Bottom Nav
+    // ใส่ Bottom Nav (สำหรับจอมือถือ)
     const navContainer = document.getElementById('bottom-nav');
     if (navContainer) {
       navContainer.innerHTML = this.renderBottomNav(activePage);
     }
+
+    // ใส่ Desktop Sidebar (สำหรับจอคอม)
+    let sidebarContainer = document.getElementById('desktop-sidebar-container');
+    if (!sidebarContainer) {
+      sidebarContainer = document.createElement('div');
+      sidebarContainer.id = 'desktop-sidebar-container';
+      document.body.prepend(sidebarContainer);
+    }
+    sidebarContainer.innerHTML = this.renderDesktopSidebar(activePage);
+
     // Init Lucide Icons
     if (window.lucide) lucide.createIcons();
   },
