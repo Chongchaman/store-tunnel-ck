@@ -14,8 +14,13 @@ const TABS = {
 
 // ── Auth ──
 function getAuth() {
-  // ใช้ Service Account credentials จาก environment variable
-  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+  // ดีโค้ด Base64 จาก environment variable
+  const base64Creds = process.env.GOOGLE_CREDENTIALS_JSON;
+  if (!base64Creds) {
+    throw new Error('Missing GOOGLE_CREDENTIALS_JSON env variable');
+  }
+  const rawJson = Buffer.from(base64Creds, 'base64').toString('utf8');
+  const credentials = JSON.parse(rawJson);
   return new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
