@@ -24,6 +24,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type'],
 }));
 
+app.use(express.text({ type: '*/*', limit: '2mb' }));
+app.use((req, res, next) => {
+  if (typeof req.body === 'string' && req.body.trim().startsWith('{')) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {}
+  }
+  next();
+});
 app.use(express.json({ limit: '2mb' }));
 
 // ── Health check ──
